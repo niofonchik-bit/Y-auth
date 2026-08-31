@@ -1,13 +1,37 @@
 import { migrate } from 'drizzle-orm/postgres-js/migrator';
-import { loadConfig } from '../src/config/env.js';
-import { createDatabase } from '../src/db/client.js';
-
-const config = loadConfig();
-const { db, sql } = createDatabase(config, true);
+import postgres from 'postgres';
+import { drizzle } from 'drizzle-orm/postgres-js';
+import { loadEnvFile } from 'node:process';
 
 try {
-  await migrate(db, { migrationsFolder: './migrations' });
-  process.stdout.write('Migrations completed successfully.\n');
+    loadEnvFile('.env');
+} catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
+        throw error;
+    }
+}
+
+const databaseUrl = process.env.DATABASE_DIRECT_URL;
+
+if (!databaseUrl) {
+    throw new Error('DATABASE_DIRECT_URL is required');
+}
+
+const sql = postgres(databaseUrl, {
+    prepare: false,
+    max: 1,
+    idle_timeout: 20,
+    connect_timeout: 10,
+});
+
+const db = drizzle(sql);
+
+try {
+    await migrate(db, {
+        migrationsFolder: './migrations',
+    });
+
+    process.stdout.write('Migrations completed successfully.\n');
 } finally {
-  await sql.end({ timeout: 5 });
+    await sql.end({ timeout: 5 });
 }
