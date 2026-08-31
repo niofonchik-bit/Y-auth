@@ -1,7 +1,10 @@
 import { randomUUID } from 'node:crypto';
 import { exportJWK, generateKeyPair } from 'jose';
 
-const { privateKey } = await generateKeyPair('RS256', { modulusLength: 3072, extractable: true });
+const { privateKey } = await generateKeyPair('RS256', {
+	modulusLength: 3072,
+	extractable: true,
+});
 const privateJwk = await exportJWK(privateKey);
 privateJwk.kid = randomUUID();
 privateJwk.use = 'sig';

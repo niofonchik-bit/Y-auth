@@ -1,13 +1,13 @@
 {
-  "version": "7",
-  "dialect": "postgresql",
-  "entries": [
-    {
-      "idx": 0,
-      "version": "7",
-      "when": 1788158072090,
-      "tag": "0000_conscious_pandemic",
-      "breakpoints": true
-    }
-  ]
+	"version": "7",
+	"dialect": "postgresql",
+	"entries": [
+		{
+			"idx": 0,
+			"version": "7",
+			"when": 1788158072090,
+			"tag": "0000_conscious_pandemic",
+			"breakpoints": true
+		}
+	]
 }

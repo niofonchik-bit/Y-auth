@@ -1,11 +1,11 @@
 {
-  "extends": "./tsconfig.json",
-  "compilerOptions": {
-    "outDir": "dist/server",
-    "rootDir": ".",
-    "lib": ["ES2024"],
-    "types": ["node"]
-  },
-  "include": ["api", "scripts", "src/**/*.ts", "tests/**/*.ts", "*.config.ts"],
-  "exclude": ["src/web", "tests/e2e/fixture", "dist", "node_modules"]
+	"extends": "./tsconfig.json",
+	"compilerOptions": {
+		"outDir": "dist/server",
+		"rootDir": ".",
+		"lib": ["ES2024"],
+		"types": ["node"]
+	},
+	"include": ["api", "scripts", "src/**/*.ts", "tests/**/*.ts", "*.config.ts"],
+	"exclude": ["src/web", "tests/e2e/fixture", "dist", "node_modules"]
 }

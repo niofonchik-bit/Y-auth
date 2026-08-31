@@ -10,13 +10,16 @@ Install `oidc-client-ts`, keep tokens in session storage, and use Authorization 
 import { UserManager, WebStorageStateStore } from 'oidc-client-ts';
 
 export const auth = new UserManager({
-  authority: 'https://auth.niofon.com',
-  client_id: 'PROJECT_A_CLIENT_ID',
-  redirect_uri: `${location.origin}/callback`,
-  post_logout_redirect_uri: location.origin,
-  response_type: 'code',
-  scope: 'openid profile email offline_access api',
-  userStore: new WebStorageStateStore({ store: sessionStorage, prefix: 'project-a:' }),
+	authority: 'https://auth.niofon.com',
+	client_id: 'PROJECT_A_CLIENT_ID',
+	redirect_uri: `${location.origin}/callback`,
+	post_logout_redirect_uri: location.origin,
+	response_type: 'code',
+	scope: 'openid profile email offline_access api',
+	userStore: new WebStorageStateStore({
+		store: sessionStorage,
+		prefix: 'project-a:',
+	}),
 });
 
 export const login = () => auth.signinRedirect();
@@ -41,14 +44,14 @@ const issuer = 'https://auth.niofon.com';
 const jwks = createRemoteJWKSet(new URL(`${issuer}/jwks`));
 
 export async function verifyApiToken(authorization?: string) {
-  if (!authorization?.startsWith('Bearer ')) throw new Error('Bearer token required');
-  const { payload } = await jwtVerify(authorization.slice(7), jwks, {
-    issuer,
-    audience: 'https://api.example.com',
-    algorithms: ['RS256'],
-  });
-  if (!payload.sub) throw new Error('Subject required');
-  return payload;
+	if (!authorization?.startsWith('Bearer ')) throw new Error('Bearer token required');
+	const { payload } = await jwtVerify(authorization.slice(7), jwks, {
+		issuer,
+		audience: 'https://api.example.com',
+		algorithms: ['RS256'],
+	});
+	if (!payload.sub) throw new Error('Subject required');
+	return payload;
 }
 ```
 
@@ -64,4 +67,3 @@ Treat Electron as a public native client: create PKCE and state in the main proc
 - Revoking one client grant invalidates that client's refresh family without signing out other projects.
 - “Logout everywhere” revokes every user session and related grants.
 - Deactivation increments session state and blocks existing sessions and refreshes.
-
