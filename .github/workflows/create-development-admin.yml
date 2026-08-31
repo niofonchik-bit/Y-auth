@@ -1,0 +1,38 @@
+name: Create development admin
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: y-auth-development-admin-bootstrap
+  cancel-in-progress: false
+
+jobs:
+  create-admin:
+    name: Create administrator
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: development
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci --include=dev
+
+      - name: Create administrator
+        run: npm run admin:create
+        env:
+          DATABASE_DIRECT_URL: ${{ secrets.DATABASE_DIRECT_URL }}
+          ADMIN_EMAIL: ${{ secrets.ADMIN_EMAIL }}
+          ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
