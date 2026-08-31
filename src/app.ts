@@ -231,7 +231,7 @@ export async function buildApp(environment?: NodeJS.ProcessEnv) {
 
 	const webRoot = join(process.cwd(), 'dist', 'web');
 	if (existsSync(join(webRoot, 'index.html'))) {
-		await app.register(fastifyStatic, { root: webRoot, wildcard: false });
+		await app.register(fastifyStatic, { root: webRoot, wildcard: false, index: false });
 		app.get('/', (_request, reply) => reply.sendFile('index.html'));
 		app.get('/login', (_request, reply) => reply.sendFile('index.html'));
 		app.get('/register', (_request, reply) => reply.sendFile('index.html'));
