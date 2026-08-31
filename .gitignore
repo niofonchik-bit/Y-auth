@@ -1,0 +1,14 @@
+node_modules
+.env
+.env.*
+!.env.example
+dist
+coverage
+.vercel
+playwright-report
+test-results
+*.pem
+*.key
+*.jwks.json
+*.log
+.DS_Store

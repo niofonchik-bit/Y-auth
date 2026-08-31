@@ -1,0 +1,74 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      NODE_ENV: test
+      AUTH_ISSUER: http://localhost:3000
+      DATABASE_URL: postgresql://y_auth_test:y_auth_test@127.0.0.1:5432/y_auth_test
+      DATABASE_DIRECT_URL: postgresql://y_auth_test:y_auth_test@127.0.0.1:5432/y_auth_test
+      TEST_DATABASE_URL: postgresql://y_auth_test:y_auth_test@127.0.0.1:5432/y_auth_test
+      REDIS_URL: redis://127.0.0.1:6379
+      TEST_REDIS_URL: redis://127.0.0.1:6379
+      ALLOW_TEST_DATABASE_RESET: "true"
+      OIDC_COOKIE_KEYS: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa,bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+      SESSION_HMAC_SECRET: ssssssssssssssssssssssssssssssssssssssss
+      CSRF_HMAC_SECRET: cccccccccccccccccccccccccccccccccccccccc
+      RATE_LIMIT_HMAC_SECRET: rrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrr
+      CAPTCHA_MODE: off
+      ENABLE_SWAGGER: "false"
+      LOG_LEVEL: warn
+      E2E_TEST_APP_URL: http://localhost:5173
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install native PostgreSQL and Redis
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql redis-server
+          sudo systemctl start postgresql
+          sudo systemctl start redis-server
+          sudo -u postgres psql -c "CREATE USER y_auth_test WITH PASSWORD 'y_auth_test';"
+          sudo -u postgres psql -c "CREATE DATABASE y_auth_test OWNER y_auth_test;"
+
+      - name: Install service dependencies
+        run: npm ci
+
+      - name: Generate ephemeral CI signing key
+        run: echo "OIDC_JWKS=$(npm run --silent keys:generate | sed -n 's/^OIDC_JWKS=//p')" >> "$GITHUB_ENV"
+
+      - name: Migrate test database
+        run: npm run db:migrate
+
+      - name: Verify service
+        run: |
+          npm run typecheck
+          npm run lint
+          npm run test:unit
+          npm run test:integration
+          npm run test:security
+          npm run build
+
+      - name: Verify production dependency audit
+        run: npm audit --omit=dev --audit-level=high
+
+      - name: Seed E2E clients and administrator
+        run: npm run --silent test:e2e:seed >> "$GITHUB_ENV"
+
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Browser E2E
+        run: npm run test:e2e
