@@ -1,6 +1,5 @@
 import { existsSync } from 'node:fs';
-import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { join } from 'node:path';
 import cookie from '@fastify/cookie';
 import formbody from '@fastify/formbody';
 import helmet from '@fastify/helmet';
@@ -230,8 +229,7 @@ export async function buildApp(environment?: NodeJS.ProcessEnv) {
 		config,
 	});
 
-	const currentDirectory = dirname(fileURLToPath(import.meta.url));
-	const webRoot = join(currentDirectory, '../../web');
+	const webRoot = join(process.cwd(), 'dist', 'web');
 	if (existsSync(join(webRoot, 'index.html'))) {
 		await app.register(fastifyStatic, { root: webRoot, wildcard: false });
 		app.get('/', (_request, reply) => reply.sendFile('index.html'));
