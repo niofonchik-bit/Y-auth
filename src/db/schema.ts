@@ -41,10 +41,12 @@ export const oauthClients = pgTable(
 	{
 		id: uuid('id').primaryKey().defaultRandom(),
 		clientId: text('client_id').notNull(),
+		projectKey: text('project_key').notNull(),
 		name: text('name').notNull(),
 		type: clientType('type').notNull(),
 		enabled: boolean('enabled').notNull().default(true),
 		firstParty: boolean('first_party').notNull().default(true),
+		allowLoopbackRedirects: boolean('allow_loopback_redirects').notNull().default(false),
 		allowedScopes: text('allowed_scopes').array().notNull(),
 		grantTypes: text('grant_types').array().notNull(),
 		responseTypes: text('response_types').array().notNull(),
@@ -55,7 +57,10 @@ export const oauthClients = pgTable(
 		lastUsedAt: timestamp('last_used_at', { withTimezone: true }),
 		...timestamps,
 	},
-	(table) => [uniqueIndex('oauth_clients_client_id_unique').on(table.clientId)],
+	(table) => [
+		uniqueIndex('oauth_clients_client_id_unique').on(table.clientId),
+		uniqueIndex('oauth_clients_project_key_unique').on(table.projectKey),
+	],
 );
 
 export const oauthClientRedirectUris = pgTable(

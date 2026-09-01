@@ -99,7 +99,7 @@ export async function buildApp(environment?: NodeJS.ProcessEnv) {
 	const audit = new AuditService(db);
 	const sessions = new SessionService(db, config);
 	const policies = new PolicyResolver(db);
-	const clients = new ClientService(db, config.isProduction);
+	const clients = new ClientService(db);
 	const limiter = new DistributedRateLimiter(redis, config);
 	const mail = new ResendMailProvider(config);
 	const captcha = createCaptchaProvider(config);

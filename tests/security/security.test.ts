@@ -11,7 +11,7 @@ describe('security regressions', () => {
 			'https://user:pass@example.com/callback',
 			'https://example.com/callback#token',
 		]) {
-			expect(validateRedirectUri(value, true), value).not.toBeNull();
+			expect(validateRedirectUri(value, { allowLoopbackRedirects: true }), value).not.toBeNull();
 		}
 	});
 

@@ -1,7 +1,7 @@
 import { and, count, desc, eq, ilike, isNull, sql } from 'drizzle-orm';
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import type { AuditService } from '../audit/service.js';
-import type { ClientInput, ClientService } from '../clients/service.js';
+import type { ClientInput, ClientService, ClientUpdateInput } from '../clients/service.js';
 import type { AppConfig } from '../config/env.js';
 import type { Database } from '../db/client.js';
 import { auditEvents, globalSettings, oauthClients, userSessions, users } from '../db/schema.js';
@@ -69,6 +69,11 @@ export async function registerAdminRoutes(
 		return { items: await clients.list(limit, offset), limit, offset };
 	});
 
+	app.get<{ Params: { clientId: string } }>('/api/v1/admin/clients/:clientId', async (request) => {
+		await requireAdmin(request, sessions);
+		return clients.get(request.params.clientId);
+	});
+
 	app.post<{ Body: CsrfBody & ClientInput }>('/api/v1/admin/clients', async (request) => {
 		const admin = await requireAdmin(request, sessions);
 		requireCsrf(request, request.body.csrfToken, config);
@@ -77,10 +82,27 @@ export async function registerAdminRoutes(
 			type: 'client.created',
 			success: true,
 			actorUserId: admin.user.id,
-			metadata: { clientId: created.clientId },
+			metadata: { clientId: created.clientId, projectKey: request.body.projectKey },
 			request,
 		});
 		return created;
+	});
+
+	app.patch<{ Params: { clientId: string }; Body: CsrfBody & ClientUpdateInput }>('/api/v1/admin/clients/:clientId', async (request) => {
+		const admin = await requireAdmin(request, sessions);
+		requireCsrf(request, request.body.csrfToken, config);
+		await clients.update(request.params.clientId, request.body);
+		await audit.write({
+			type: 'client.updated',
+			success: true,
+			actorUserId: admin.user.id,
+			metadata: {
+				clientId: request.params.clientId,
+				projectKey: request.body.projectKey,
+			},
+			request,
+		});
+		return { updated: true };
 	});
 
 	app.post<{

@@ -9,7 +9,7 @@ if (process.env.NODE_ENV === 'production') throw new Error('E2E seed cannot run 
 
 const config = loadConfig();
 const { db, sql } = createDatabase(config, true);
-const clients = new ClientService(db, false);
+const clients = new ClientService(db);
 const origin = process.env.E2E_TEST_APP_URL ?? 'http://localhost:5173';
 const definitions = [
 	['A', 'project-a'],
@@ -20,9 +20,11 @@ const definitions = [
 try {
 	for (const [label, key] of definitions) {
 		const created = await clients.create({
+			projectKey: `e2e-${key}`,
 			name: `Y.auth Test — Project ${label}`,
 			type: 'public',
 			firstParty: true,
+			allowLoopbackRedirects: true,
 			redirectUris: [`${origin}/callback/${key}`],
 			postLogoutRedirectUris: [`${origin}/`],
 			allowedScopes: ['openid', 'profile', 'email', 'offline_access', 'y_auth.sessions'],

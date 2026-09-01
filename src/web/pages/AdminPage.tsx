@@ -1,5 +1,6 @@
 import Add from '@mui/icons-material/Add';
 import Block from '@mui/icons-material/Block';
+import Edit from '@mui/icons-material/Edit';
 import Key from '@mui/icons-material/Key';
 import Refresh from '@mui/icons-material/Refresh';
 import {
@@ -37,12 +38,21 @@ interface Dashboard {
 
 interface ClientRow {
 	clientId: string;
+	projectKey: string;
 	name: string;
 	type: 'public' | 'confidential';
 	enabled: boolean;
 	firstParty: boolean;
+	allowLoopbackRedirects: boolean;
 	allowedScopes: string[];
 	accessTokenAudience: string;
+}
+
+interface ClientDetails extends ClientRow {
+	redirectUris: string[];
+	postLogoutRedirectUris: string[];
+	registrationEnabledOverride: boolean | null;
+	minPasswordLengthOverride: number | null;
 }
 
 interface UserRow {
@@ -86,6 +96,13 @@ interface Settings {
 
 const tabNames = ['Dashboard', 'Clients', 'Users', 'Sessions', 'Audit', 'Settings'];
 
+function splitLines(value: FormDataEntryValue | null): string[] {
+	return String(value ?? '')
+		.split(/\r?\n/)
+		.map((item) => item.trim())
+		.filter(Boolean);
+}
+
 export default function AdminPage() {
 	const [tab, setTab] = useState(0);
 	const [csrf, setCsrf] = useState('');
@@ -98,6 +115,7 @@ export default function AdminPage() {
 	const [error, setError] = useState<string | null>(null);
 	const [loading, setLoading] = useState(false);
 	const [createOpen, setCreateOpen] = useState(false);
+	const [editingClient, setEditingClient] = useState<ClientDetails | null>(null);
 	const [secret, setSecret] = useState<string | null>(null);
 
 	const load = useCallback(async () => {
@@ -140,11 +158,6 @@ export default function AdminPage() {
 		event.preventDefault();
 		const form = new FormData(event.currentTarget);
 		const type = form.get('type') === 'confidential' ? 'confidential' : 'public';
-		const split = (value: FormDataEntryValue | null) =>
-			String(value ?? '')
-				.split(/\r?\n/)
-				.map((item) => item.trim())
-				.filter(Boolean);
 		setLoading(true);
 		try {
 			const created = await api<{
@@ -154,11 +167,13 @@ export default function AdminPage() {
 				method: 'POST',
 				body: JSON.stringify({
 					csrfToken: csrf,
+					projectKey: form.get('projectKey'),
 					name: form.get('name'),
 					type,
 					firstParty: form.get('firstParty') === 'on',
-					redirectUris: split(form.get('redirectUris')),
-					postLogoutRedirectUris: split(form.get('postLogoutRedirectUris')),
+					allowLoopbackRedirects: form.get('allowLoopbackRedirects') === 'on',
+					redirectUris: splitLines(form.get('redirectUris')),
+					postLogoutRedirectUris: splitLines(form.get('postLogoutRedirectUris')),
 					allowedScopes: ['openid', 'profile', 'email', 'offline_access', 'y_auth.sessions'],
 				}),
 			});
@@ -167,6 +182,46 @@ export default function AdminPage() {
 			await load();
 		} catch (reason) {
 			setError(reason instanceof Error ? reason.message : 'Unable to create client');
+		} finally {
+			setLoading(false);
+		}
+	};
+
+	const openClientEditor = async (clientId: string) => {
+		setLoading(true);
+		setError(null);
+		try {
+			setEditingClient(await api<ClientDetails>(`/api/v1/admin/clients/${clientId}`));
+		} catch (reason) {
+			setError(reason instanceof Error ? reason.message : 'Unable to load client');
+		} finally {
+			setLoading(false);
+		}
+	};
+
+	const updateClient = async (event: FormEvent<HTMLFormElement>) => {
+		event.preventDefault();
+		if (!editingClient) return;
+		const form = new FormData(event.currentTarget);
+		setLoading(true);
+		setError(null);
+		try {
+			await api(`/api/v1/admin/clients/${editingClient.clientId}`, {
+				method: 'PATCH',
+				body: JSON.stringify({
+					csrfToken: csrf,
+					projectKey: form.get('projectKey'),
+					name: form.get('name'),
+					firstParty: form.get('firstParty') === 'on',
+					allowLoopbackRedirects: form.get('allowLoopbackRedirects') === 'on',
+					redirectUris: splitLines(form.get('redirectUris')),
+					postLogoutRedirectUris: splitLines(form.get('postLogoutRedirectUris')),
+				}),
+			});
+			setEditingClient(null);
+			await load();
+		} catch (reason) {
+			setError(reason instanceof Error ? reason.message : 'Unable to update client');
 		} finally {
 			setLoading(false);
 		}
@@ -252,10 +307,17 @@ export default function AdminPage() {
 								<div>
 									<Typography variant="h6">{client.name}</Typography>
 									<Typography variant="body2" color="text.secondary">
-										{client.clientId} · {client.type} · {client.accessTokenAudience}
+										{client.projectKey} · {client.clientId} · {client.type}
+									</Typography>
+									<Typography variant="body2" color="text.secondary">
+										{client.allowLoopbackRedirects ? 'localhost development enabled' : 'HTTPS redirects only'} ·{' '}
+										{client.accessTokenAudience}
 									</Typography>
 								</div>
 								<Stack direction="row" spacing={1}>
+									<Button startIcon={<Edit />} disabled={loading} onClick={() => openClientEditor(client.clientId)}>
+										Edit
+									</Button>
 									{client.type === 'confidential' && (
 										<Button
 											startIcon={<Key />}
@@ -476,13 +538,28 @@ export default function AdminPage() {
 					<DialogTitle>Create OAuth client</DialogTitle>
 					<DialogContent>
 						<Stack spacing={2} sx={{ pt: 1 }}>
+							<TextField
+								name="projectKey"
+								label="Project key"
+								placeholder="lexi"
+								helperText="Stable project identifier: lowercase letters, numbers and hyphens"
+								required
+							/>
 							<TextField name="name" label="Name" required />
 							<TextField name="type" label="Type" select defaultValue="public">
 								<MenuItem value="public">Public</MenuItem>
 								<MenuItem value="confidential">Confidential</MenuItem>
 							</TextField>
 							<FormControlLabel control={<Checkbox name="firstParty" defaultChecked />} label="First-party client" />
-							<TextField name="redirectUris" label="Redirect URIs, one per line" multiline minRows={3} required />
+							<FormControlLabel control={<Checkbox name="allowLoopbackRedirects" />} label="Allow localhost development redirects" />
+							<TextField
+								name="redirectUris"
+								label="Redirect URIs, one per line"
+								helperText="The same localhost callback may be registered for different clients; client_id keeps them separate."
+								multiline
+								minRows={3}
+								required
+							/>
 							<TextField name="postLogoutRedirectUris" label="Post-logout URIs, one per line" multiline minRows={2} />
 						</Stack>
 					</DialogContent>
@@ -494,6 +571,57 @@ export default function AdminPage() {
 					</DialogActions>
 				</Box>
 			</Dialog>
+			{editingClient && (
+				<Dialog open onClose={() => !loading && setEditingClient(null)} fullWidth maxWidth="sm">
+					<Box component="form" onSubmit={updateClient}>
+						<DialogTitle>Edit OAuth client</DialogTitle>
+						<DialogContent>
+							<Stack spacing={2} sx={{ pt: 1 }}>
+								<TextField
+									name="projectKey"
+									label="Project key"
+									defaultValue={editingClient.projectKey}
+									helperText="Stable project identifier: lowercase letters, numbers and hyphens"
+									required
+								/>
+								<TextField name="name" label="Name" defaultValue={editingClient.name} required />
+								<TextField label="Client ID" value={editingClient.clientId} slotProps={{ htmlInput: { readOnly: true } }} />
+								<TextField label="Type" value={editingClient.type} slotProps={{ htmlInput: { readOnly: true } }} />
+								<FormControlLabel
+									control={<Checkbox name="firstParty" defaultChecked={editingClient.firstParty} />}
+									label="First-party client"
+								/>
+								<FormControlLabel
+									control={<Checkbox name="allowLoopbackRedirects" defaultChecked={editingClient.allowLoopbackRedirects} />}
+									label="Allow localhost development redirects"
+								/>
+								<TextField
+									name="redirectUris"
+									label="Redirect URIs, one per line"
+									defaultValue={editingClient.redirectUris.join('\n')}
+									multiline
+									minRows={3}
+									required
+								/>
+								<TextField
+									name="postLogoutRedirectUris"
+									label="Post-logout URIs, one per line"
+									defaultValue={editingClient.postLogoutRedirectUris.join('\n')}
+									multiline
+									minRows={2}
+								/>
+							</Stack>
+						</DialogContent>
+						<DialogActions>
+							<Button onClick={() => setEditingClient(null)}>Cancel</Button>
+							<AsyncButton type="submit" variant="contained" loading={loading}>
+								Save
+							</AsyncButton>
+						</DialogActions>
+					</Box>
+				</Dialog>
+			)}
+
 			<Dialog open={secret !== null} onClose={() => setSecret(null)} fullWidth maxWidth="sm">
 				<DialogTitle>Save this value now</DialogTitle>
 				<DialogContent>

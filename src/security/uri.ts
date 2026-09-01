@@ -1,6 +1,10 @@
 const LOOPBACK_HOSTS = new Set(['localhost', '127.0.0.1', '[::1]']);
 
-export function validateRedirectUri(value: string, production: boolean): string | null {
+export interface RedirectUriOptions {
+	allowLoopbackRedirects: boolean;
+}
+
+export function validateRedirectUri(value: string, options: RedirectUriOptions): string | null {
 	if (value.includes('*')) return 'Wildcard redirect URIs are not allowed.';
 
 	let uri: URL;
@@ -12,8 +16,10 @@ export function validateRedirectUri(value: string, production: boolean): string 
 
 	if (uri.username || uri.password || uri.hash) return 'Credentials and fragments are not allowed.';
 	if (uri.protocol === 'https:') return null;
-	if (!production && uri.protocol === 'http:' && LOOPBACK_HOSTS.has(uri.hostname)) return null;
-	return 'HTTPS is required outside localhost.';
+	if (uri.protocol === 'http:' && LOOPBACK_HOSTS.has(uri.hostname)) {
+		return options.allowLoopbackRedirects ? null : 'Loopback redirect URIs are disabled for this client.';
+	}
+	return 'HTTPS is required outside loopback development redirects.';
 }
 
 export function redirectOrigin(value: string): string | null {

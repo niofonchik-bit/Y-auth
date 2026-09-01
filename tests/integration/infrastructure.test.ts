@@ -4,9 +4,10 @@ import { migrate } from 'drizzle-orm/postgres-js/migrator';
 import { Redis } from 'ioredis';
 import { exportJWK, generateKeyPair } from 'jose';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { ClientService } from '../../src/clients/service.js';
 import { type AppConfig, loadConfig } from '../../src/config/env.js';
 import { createDatabase, type Database } from '../../src/db/client.js';
-import { users } from '../../src/db/schema.js';
+import { oidcRecords, users } from '../../src/db/schema.js';
 import { DistributedRateLimiter } from '../../src/security/rate-limit.js';
 
 const enabled = Boolean(process.env.TEST_DATABASE_URL && process.env.TEST_REDIS_URL && process.env.ALLOW_TEST_DATABASE_RESET === 'true');
@@ -60,6 +61,38 @@ describe.skipIf(!enabled)('PostgreSQL and Redis integration', () => {
 		expect(inserts.filter((result) => result.status === 'fulfilled')).toHaveLength(1);
 		const [result] = await db.select({ value: count() }).from(users).where(eq(users.normalizedEmail, normalizedEmail));
 		expect(result?.value).toBe(1);
+	});
+
+	it('allows different clients to use the same loopback callback while keeping separate client IDs', async () => {
+		const clients = new ClientService(db);
+		const callback = 'http://localhost:5173/callback';
+		const suffix = randomUUID();
+		const base = {
+			type: 'public' as const,
+			firstParty: true,
+			allowLoopbackRedirects: true,
+			redirectUris: [callback],
+			postLogoutRedirectUris: ['http://localhost:5173/'],
+			allowedScopes: ['openid', 'profile', 'email'],
+		};
+
+		const projectA = await clients.create({
+			...base,
+			projectKey: `integration-a-${suffix}`,
+			name: 'Integration Project A',
+		});
+		const projectB = await clients.create({
+			...base,
+			projectKey: `integration-b-${suffix}`,
+			name: 'Integration Project B',
+		});
+
+		expect(projectA.clientId).not.toBe(projectB.clientId);
+		const [recordA] = await db.select({ payload: oidcRecords.payload }).from(oidcRecords).where(eq(oidcRecords.id, projectA.clientId)).limit(1);
+		const [recordB] = await db.select({ payload: oidcRecords.payload }).from(oidcRecords).where(eq(oidcRecords.id, projectB.clientId)).limit(1);
+
+		expect(recordA?.payload.redirect_uris).toEqual([callback]);
+		expect(recordB?.payload.redirect_uris).toEqual([callback]);
 	});
 
 	it('shares rate-limit state through Redis and fails at the configured threshold', async () => {
