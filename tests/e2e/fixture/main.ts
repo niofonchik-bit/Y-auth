@@ -13,7 +13,7 @@ const clients = definitions.map(([name, key, clientId]) => ({
 	manager: new UserManager({
 		authority: issuer,
 		client_id: clientId,
-		redirect_uri: `${window.location.origin}/callback/${key}`,
+		redirect_uri: `${window.location.origin}/callback`,
 		post_logout_redirect_uri: `${window.location.origin}/`,
 		response_type: 'code',
 		scope: 'openid profile email offline_access y_auth.sessions',
@@ -60,6 +60,18 @@ function button(label: string, action: () => Promise<void>): HTMLButtonElement {
 	return element;
 }
 
+async function signIn(client: (typeof clients)[number], register = false) {
+	sessionStorage.setItem('e2e:callback-client', client.key);
+
+	await client.manager.signinRedirect(
+		register
+			? {
+					prompt: 'create',
+				}
+			: undefined,
+	);
+}
+
 async function render(): Promise<void> {
 	app.replaceChildren();
 	for (const client of clients) {
@@ -94,19 +106,26 @@ async function render(): Promise<void> {
 			);
 		} else {
 			section.append(
-				button('Login', () => client.manager.signinRedirect()),
-				button('Register', () => client.manager.signinRedirect({ prompt: 'create' })),
+				button('Login', () => signIn(client)),
+				button('Register', () => signIn(client, true)),
 			);
 		}
 		app.append(section);
 	}
 }
 
-const callback = window.location.pathname.match(/^\/callback\/(project-[abc])$/)?.[1];
-if (callback) {
-	const client = clients.find(({ key }) => key === callback);
-	if (!client) throw new Error('Unknown callback client');
+if (window.location.pathname === '/callback') {
+	const callbackClient = sessionStorage.getItem('e2e:callback-client');
+	const client = clients.find(({ key }) => key === callbackClient);
+
+	if (!client) {
+		throw new Error('Unknown callback client');
+	}
+
 	await client.manager.signinRedirectCallback();
+
+	sessionStorage.removeItem('e2e:callback-client');
+
 	window.location.replace('/');
 } else {
 	await render();
