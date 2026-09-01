@@ -129,7 +129,7 @@ export function createOidcProvider(config: AppConfig, db: Database, sessions: Se
 			names: {
 				session: config.isProduction ? '__Host-y-auth-oidc' : 'y-auth-oidc',
 				interaction: config.isProduction ? '__Host-y-auth-interaction' : 'y-auth-interaction',
-				resume: config.isProduction ? '__Host-y-auth-resume' : 'y-auth-resume',
+				resume: config.isProduction ? '__Secure-y-auth-resume' : 'y-auth-resume',
 				state: config.isProduction ? '__Host-y-auth-state' : 'y-auth-state',
 			},
 			long: {
