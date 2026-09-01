@@ -8,6 +8,13 @@
 			"when": 1788158072090,
 			"tag": "0000_conscious_pandemic",
 			"breakpoints": true
+		},
+		{
+			"idx": 1,
+			"version": "7",
+			"when": 1788261852126,
+			"tag": "0001_client_project_identity",
+			"breakpoints": true
 		}
 	]
 }
