@@ -27,7 +27,23 @@ export interface BearerIdentity {
 }
 
 export function createBearerAuthenticator(config: AppConfig, db: Database) {
-	const keySet = createLocalJWKSet(config.jwks as JSONWebKeySet);
+	const keySet = createLocalJWKSet({
+		keys: config.jwks.keys
+			.filter((key) => key.kty !== 'oct')
+			.map((key) => {
+				const publicKey = { ...key };
+
+				delete publicKey.d;
+				delete publicKey.p;
+				delete publicKey.q;
+				delete publicKey.dp;
+				delete publicKey.dq;
+				delete publicKey.qi;
+				delete publicKey.oth;
+
+				return publicKey;
+			}),
+	} as JSONWebKeySet);
 	return async (request: FastifyRequest): Promise<BearerIdentity> => {
 		const header = request.headers.authorization;
 		if (!header?.startsWith('Bearer ')) {
