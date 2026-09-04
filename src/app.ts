@@ -94,8 +94,6 @@ export async function buildApp(environment?: NodeJS.ProcessEnv) {
 		enableOfflineQueue: false,
 		connectTimeout: 5_000,
 	});
-	await redis.connect();
-
 	const redisPing = async () => {
 		try {
 			if (redis.status === 'wait') await redis.connect();

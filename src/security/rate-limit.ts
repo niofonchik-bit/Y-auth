@@ -23,9 +23,17 @@ export class DistributedRateLimiter {
 		private readonly config: AppConfig,
 	) {}
 
+	private async ensureConnected(): Promise<void> {
+		if (this.redis.status === 'wait') {
+			await this.redis.connect();
+		}
+	}
+
 	async consume(bucket: string, identity: string, limit: number, windowSeconds: number): Promise<LimitResult> {
 		const safeIdentity = hmacSha256(this.config.RATE_LIMIT_HMAC_SECRET, identity);
 		try {
+			await this.ensureConnected();
+
 			const result = await this.redis.eval(LUA, 1, `y-auth:limit:${bucket}:${safeIdentity}`, windowSeconds);
 			if (!Array.isArray(result)) throw new Error('Unexpected Redis response');
 			const count = Number(result[0]);
@@ -43,6 +51,8 @@ export class DistributedRateLimiter {
 	async peek(bucket: string, identity: string): Promise<number> {
 		const safeIdentity = hmacSha256(this.config.RATE_LIMIT_HMAC_SECRET, identity);
 		try {
+			await this.ensureConnected();
+
 			return Number((await this.redis.get(`y-auth:limit:${bucket}:${safeIdentity}`)) ?? 0);
 		} catch {
 			throw new AppError(503, 'SECURITY_STORE_UNAVAILABLE', 'Security service is temporarily unavailable');
