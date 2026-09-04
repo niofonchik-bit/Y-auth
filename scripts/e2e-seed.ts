@@ -25,7 +25,7 @@ try {
 			type: 'public',
 			firstParty: true,
 			allowLoopbackRedirects: true,
-			redirectUris: [`${origin}/callback/${key}`],
+			redirectUris: [`${origin}/callback`],
 			postLogoutRedirectUris: [`${origin}/`],
 			allowedScopes: ['openid', 'profile', 'email', 'offline_access', 'y_auth.sessions'],
 		});
