@@ -17,7 +17,11 @@ function buildInteractionPolicy() {
 	const policy = interactionPolicy.base();
 	const create = new interactionPolicy.Prompt(
 		{ name: 'create', requestable: true },
-		new interactionPolicy.Check('create_requested', 'The relying party requested account creation', (ctx) => ctx.oidc.prompts.has('create')),
+		new interactionPolicy.Check(
+			'create_requested',
+			'The relying party requested account creation',
+			(ctx) => ctx.oidc.prompts.has('create') && ctx.oidc.promptPending('create'),
+		),
 	);
 	policy.add(create, 0);
 	return policy;

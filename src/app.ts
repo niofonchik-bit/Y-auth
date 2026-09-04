@@ -94,6 +94,8 @@ export async function buildApp(environment?: NodeJS.ProcessEnv) {
 		enableOfflineQueue: false,
 		connectTimeout: 5_000,
 	});
+	await redis.connect();
+
 	const redisPing = async () => {
 		try {
 			if (redis.status === 'wait') await redis.connect();
@@ -153,7 +155,7 @@ export async function buildApp(environment?: NodeJS.ProcessEnv) {
 				connectSrc: ["'self'", ...(config.TURNSTILE_SITE_KEY ? ['https://challenges.cloudflare.com'] : [])],
 				frameSrc: config.TURNSTILE_SITE_KEY ? ['https://challenges.cloudflare.com'] : ["'none'"],
 				frameAncestors: ["'none'"],
-				formAction: ["'self'"],
+				formAction: null,
 				baseUri: ["'none'"],
 				objectSrc: ["'none'"],
 			},
