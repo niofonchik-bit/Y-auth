@@ -1,4 +1,4 @@
-import { Alert, Box, Button, CircularProgress, Paper, Stack, TextField, Typography } from '@mui/material';
+import { Alert, Box, Button, Checkbox, FormControlLabel, Paper, Stack, TextField, Typography } from '@mui/material';
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { api } from '../api';
@@ -14,6 +14,7 @@ interface Interaction {
 	registrationCaptchaRequired: boolean;
 	turnstileSiteKey: string | null;
 	csrfToken: string;
+	requestedScopes: string[];
 }
 
 export default function InteractionPage() {
@@ -42,7 +43,7 @@ export default function InteractionPage() {
 	if (!interaction || !uid)
 		return (
 			<Box sx={{ display: 'grid', placeItems: 'center', py: 12 }}>
-				<CircularProgress />
+				<div className="skeleton" style={{ width: 240, height: 4 }} />
 			</Box>
 		);
 
@@ -55,10 +56,35 @@ export default function InteractionPage() {
 				<Typography variant="h5" gutterBottom>
 					Authorize {interaction.client?.name ?? 'application'}
 				</Typography>
-				<Typography color="text.secondary">This application requests access to your basic Y.auth profile.</Typography>
-				<Alert severity="warning" sx={{ mt: 3 }}>
-					Consent for third-party clients is reserved for a later release.
-				</Alert>
+				<Typography color="text.secondary">This application requests access to:</Typography>
+				<Stack component="ul" spacing={1} sx={{ pl: 2 }}>
+					{interaction.requestedScopes.map((scope) => (
+						<li key={scope}>
+							<strong>{scope}</strong> —{' '}
+							{scope === 'email'
+								? 'View your email address'
+								: scope === 'profile'
+									? 'View basic profile information'
+									: scope === 'y_auth.sessions'
+										? 'Manage Y.auth sessions'
+										: 'Confirm your identity'}
+						</li>
+					))}
+				</Stack>
+				<Box
+					component="form"
+					method="post"
+					action={`/interaction/${encodeURIComponent(uid)}/consent`}
+					sx={{ mt: 3, display: 'flex', gap: 1.5, justifyContent: 'flex-end' }}
+				>
+					<input type="hidden" name="csrfToken" value={interaction.csrfToken} />
+					<Button name="decision" value="deny" type="submit">
+						Deny
+					</Button>
+					<Button name="decision" value="allow" type="submit" variant="contained">
+						Allow
+					</Button>
+				</Box>
 			</Paper>
 		);
 	}
@@ -84,15 +110,17 @@ export default function InteractionPage() {
 								<Alert severity="error">
 									{interactionError === 'INVALID_CREDENTIALS'
 										? 'Invalid email or password'
-										: interactionError === 'CAPTCHA_REQUIRED'
-											? 'Complete the security check'
-											: interactionError === 'CAPTCHA_FAILED'
-												? 'Security check failed'
-												: interactionError === 'RATE_LIMITED'
-													? 'Too many attempts. Try again later.'
-													: interactionError === 'REGISTRATION_FAILED'
-														? 'Unable to create account'
-														: 'The request could not be completed'}
+										: interactionError === 'MFA_REQUIRED'
+											? 'Enter your authenticator or recovery code'
+											: interactionError === 'CAPTCHA_REQUIRED'
+												? 'Complete the security check'
+												: interactionError === 'CAPTCHA_FAILED'
+													? 'Security check failed'
+													: interactionError === 'RATE_LIMITED'
+														? 'Too many attempts. Try again later.'
+														: interactionError === 'REGISTRATION_FAILED'
+															? 'Unable to create account'
+															: 'The request could not be completed'}
 								</Alert>
 							)}
 							{isRegistration && <TextField name="displayName" label="Display name (optional)" autoComplete="name" />}
@@ -115,6 +143,12 @@ export default function InteractionPage() {
 								autoComplete={isRegistration ? 'new-password' : 'current-password'}
 								helperText={isRegistration ? `Minimum ${interaction.minPasswordLength} characters` : undefined}
 							/>
+							{!isRegistration && (
+								<TextField name="mfaCode" label="Authenticator or recovery code (when enabled)" autoComplete="one-time-code" />
+							)}
+							{!isRegistration && (
+								<FormControlLabel control={<Checkbox name="keepSignedIn" value="true" />} label="Keep me signed in" />
+							)}
 							{captchaRequired && interaction.turnstileSiteKey && <Turnstile siteKey={interaction.turnstileSiteKey} />}
 							{captchaRequired && !interaction.turnstileSiteKey && (
 								<Alert severity="error">Security check is required but not configured.</Alert>
@@ -122,7 +156,10 @@ export default function InteractionPage() {
 							<Button type="submit" variant="contained" size="large" disabled={isRegistration && !interaction.registrationEnabled}>
 								{isRegistration ? 'Create account' : 'Sign in'}
 							</Button>
-							{!isRegistration && <Button href="/reset-password">Forgot password</Button>}
+							{!isRegistration && (
+								<Button href={`/auth/google/start?interactionUid=${encodeURIComponent(uid)}`}>Continue with Google</Button>
+							)}
+							{!isRegistration && <Button href="/forgot-password">Forgot password</Button>}
 							{interaction.prompt === 'login' && (
 								<Button type="button" onClick={() => setRegistrationMode((value) => !value)}>
 									{isRegistration ? 'Back to sign in' : 'Create account'}

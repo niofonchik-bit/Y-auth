@@ -5,8 +5,9 @@ import type { AuditService } from '../audit/service.js';
 import type { PolicyResolver } from '../clients/policy.js';
 import type { AppConfig } from '../config/env.js';
 import type { Database } from '../db/client.js';
-import { passwordCredentials, passwordResetTokens, users } from '../db/schema.js';
+import { emailVerificationTokens, passwordCredentials, passwordResetTokens, users } from '../db/schema.js';
 import type { MailProvider } from '../mail/provider.js';
+import type { MfaService } from '../mfa/service.js';
 import type { CaptchaProvider } from '../security/captcha.js';
 import { randomToken, sha256 } from '../security/crypto.js';
 import { hashPassword, MAX_PASSWORD_LENGTH, passwordNeedsRehash, validatePassword, verifyPassword } from '../security/password.js';
@@ -33,6 +34,7 @@ export class AuthService {
 		private readonly audit: AuditService,
 		private readonly mail: MailProvider,
 		private readonly captcha: CaptchaProvider | null,
+		private readonly mfa: MfaService,
 	) {
 		this.dummyHash = hashPassword(randomToken(18), config);
 	}
@@ -130,10 +132,60 @@ export class AuthService {
 			sessionId,
 			request,
 		});
+		await this.issueEmailVerification(user.id, request).catch(async () => {
+			await this.audit.write({ type: 'email.verification.failed', success: false, targetUserId: user.id, request });
+		});
 		return { user, sessionId };
 	}
 
-	async login(input: { email: string; password: string; captchaToken?: string }, request: FastifyRequest, reply: FastifyReply) {
+	async issueEmailVerification(userId: string, request: FastifyRequest): Promise<void> {
+		await this.rateLimiter.consume('email-verification-user', userId, 5, 3_600);
+		const [user] = await this.db.select().from(users).where(eq(users.id, userId)).limit(1);
+		if (!user || user.status !== 'active' || user.emailVerifiedAt) return;
+		const token = randomToken(32);
+		const expiresAt = new Date(Date.now() + this.config.EMAIL_VERIFICATION_TTL_SECONDS * 1_000);
+		await this.db.transaction(async (tx) => {
+			await tx
+				.update(emailVerificationTokens)
+				.set({ usedAt: new Date() })
+				.where(and(eq(emailVerificationTokens.userId, user.id), isNull(emailVerificationTokens.usedAt)));
+			await tx.insert(emailVerificationTokens).values({ userId: user.id, tokenHash: sha256(token), expiresAt });
+		});
+		await this.mail.sendEmailVerification({
+			email: user.email,
+			displayName: user.displayName,
+			locale: user.locale,
+			verificationUrl: `${this.config.issuer.origin}/verify-email?token=${encodeURIComponent(token)}`,
+		});
+		await this.audit.write({ type: 'email.verification.sent', success: true, targetUserId: user.id, request });
+	}
+
+	async verifyEmail(token: string, request: FastifyRequest): Promise<void> {
+		await this.rateLimiter.consume('email-verification-ip', request.ip, 30, 900);
+		const [record] = await this.db
+			.select()
+			.from(emailVerificationTokens)
+			.where(
+				and(
+					eq(emailVerificationTokens.tokenHash, sha256(token)),
+					isNull(emailVerificationTokens.usedAt),
+					gt(emailVerificationTokens.expiresAt, new Date()),
+				),
+			)
+			.limit(1);
+		if (!record) throw new AppError(400, 'VERIFICATION_TOKEN_INVALID', 'Verification link is invalid or expired');
+		await this.db.transaction(async (tx) => {
+			await tx.update(emailVerificationTokens).set({ usedAt: new Date() }).where(eq(emailVerificationTokens.id, record.id));
+			await tx.update(users).set({ emailVerifiedAt: new Date(), updatedAt: new Date() }).where(eq(users.id, record.userId));
+		});
+		await this.audit.write({ type: 'email.verified', success: true, targetUserId: record.userId, request });
+	}
+
+	async login(
+		input: { email: string; password: string; captchaToken?: string; mfaCode?: string; keepSignedIn?: boolean },
+		request: FastifyRequest,
+		reply: FastifyReply,
+	) {
 		const normalizedEmail = normalizeEmail(input.email);
 		const [accountLimit, ipLimit] = await Promise.all([
 			this.rateLimiter.consume('login-account-ip', `${normalizedEmail}|${request.ip}`, 5, 600),
@@ -171,7 +223,13 @@ export class AuthService {
 				.set({ passwordHash: replacement, updatedAt: new Date() })
 				.where(eq(passwordCredentials.userId, result.user.id));
 		}
-		const sessionId = await this.sessions.create(result.user.id, request, reply);
+		const mfaEnabled = await this.mfa.hasEnabled(result.user.id);
+		let secondFactor: 'otp' | 'recovery' | null = null;
+		if (mfaEnabled) {
+			if (!input.mfaCode) throw new AppError(401, 'MFA_REQUIRED', 'Two-factor authentication is required');
+			secondFactor = await this.mfa.verify(result.user.id, input.mfaCode);
+		}
+		const sessionId = await this.sessions.create(result.user.id, request, reply, input.keepSignedIn ?? false);
 		await this.audit.write({
 			type: 'login.succeeded',
 			success: true,
@@ -180,7 +238,7 @@ export class AuthService {
 			sessionId,
 			request,
 		});
-		return { user: result.user, sessionId };
+		return { user: result.user, sessionId, amr: secondFactor ? ['pwd', secondFactor, 'mfa'] : ['pwd'] };
 	}
 
 	async requestPasswordReset(email: string, request: FastifyRequest): Promise<void> {

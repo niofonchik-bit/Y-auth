@@ -1,6 +1,7 @@
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import cookie from '@fastify/cookie';
+import multipart from '@fastify/multipart';
 import formbody from '@fastify/formbody';
 import helmet from '@fastify/helmet';
 import middie from '@fastify/middie';
@@ -14,6 +15,8 @@ import { registerAccountRoutes } from './account/routes.js';
 import { AccountService } from './account/service.js';
 import { registerAdminRoutes } from './admin/routes.js';
 import { AuditService } from './audit/service.js';
+import { registerAvatarRoutes } from './avatar/routes.js';
+import { AvatarService } from './avatar/service.js';
 import { registerAuthRoutes } from './auth/routes.js';
 import { AuthService } from './auth/service.js';
 import { PolicyResolver } from './clients/policy.js';
@@ -22,13 +25,17 @@ import { type AppConfig, loadConfig } from './config/env.js';
 import { createDatabase } from './db/client.js';
 import { oauthClientRedirectUris, oauthClients } from './db/schema.js';
 import { registerHealthRoutes } from './health/routes.js';
+import { registerGoogleRoutes } from './google/routes.js';
+import { GoogleIdentityService } from './google/service.js';
 import { ResendMailProvider } from './mail/provider.js';
+import { MfaService } from './mfa/service.js';
 import { createOidcProvider } from './oidc/provider.js';
 import { registerOidcRoutes } from './oidc/routes.js';
 import { createCaptchaProvider } from './security/captcha.js';
 import { DistributedRateLimiter } from './security/rate-limit.js';
 import { SessionService } from './sessions/service.js';
 import { AppError, sendError } from './shared/errors.js';
+import { VERSION } from './version.js';
 
 export function sanitizedPath(rawUrl?: string): string | undefined {
 	if (!rawUrl) return undefined;
@@ -103,9 +110,12 @@ export async function buildApp(environment?: NodeJS.ProcessEnv) {
 	const limiter = new DistributedRateLimiter(redis, config);
 	const mail = new ResendMailProvider(config);
 	const captcha = createCaptchaProvider(config);
-	const auth = new AuthService(db, config, policies, limiter, sessions, audit, mail, captcha);
+	const mfa = new MfaService(db, config, audit);
+	const auth = new AuthService(db, config, policies, limiter, sessions, audit, mail, captcha, mfa);
 	const account = new AccountService(db, config, policies, sessions, audit);
 	const provider = createOidcProvider(config, db, sessions, audit);
+	const google = new GoogleIdentityService(db, redis, config, audit);
+	const avatars = new AvatarService(db, config, audit);
 	const trustedClientOrigin = async (origin: string) => {
 		let parsed: URL;
 		try {
@@ -130,6 +140,7 @@ export async function buildApp(environment?: NodeJS.ProcessEnv) {
 
 	await app.register(middie);
 	await app.register(cookie);
+	await app.register(multipart, { limits: { fileSize: 2 * 1024 * 1024, files: 1 } });
 	await app.register(formbody);
 	await app.register(helmet, {
 		global: true,
@@ -163,7 +174,7 @@ export async function buildApp(environment?: NodeJS.ProcessEnv) {
 	if (config.ENABLE_SWAGGER) {
 		await app.register(swagger, {
 			openapi: {
-				info: { title: 'Y.auth API', version: '0.1.0' },
+				info: { title: 'Y.auth API', version: VERSION },
 				servers: [{ url: config.issuer.origin }],
 			},
 		});
@@ -195,7 +206,9 @@ export async function buildApp(environment?: NodeJS.ProcessEnv) {
 	});
 
 	await registerHealthRoutes(app, { db, redisPing });
-	await registerAuthRoutes(app, { auth, config });
+	await registerAuthRoutes(app, { auth, config, sessions });
+	await registerAvatarRoutes(app, { avatars, sessions, config });
+	await registerGoogleRoutes(app, { google, sessions, provider, config });
 	app.options('/api/v1/me/*', async (request, reply) => {
 		const origin = request.headers.origin;
 		if (!origin || !(await trustedClientOrigin(origin))) {
@@ -210,7 +223,7 @@ export async function buildApp(environment?: NodeJS.ProcessEnv) {
 			.status(204)
 			.send();
 	});
-	await registerAccountRoutes(app, { db, account, sessions, audit, config });
+	await registerAccountRoutes(app, { db, account, sessions, audit, config, mfa });
 	await registerAdminRoutes(app, {
 		db,
 		clients,
@@ -235,13 +248,11 @@ export async function buildApp(environment?: NodeJS.ProcessEnv) {
 		app.get('/', (_request, reply) => reply.sendFile('index.html'));
 		app.get('/login', (_request, reply) => reply.sendFile('index.html'));
 		app.get('/register', (_request, reply) => reply.sendFile('index.html'));
-		app.get('/account', (_request, reply) => reply.sendFile('index.html'));
-		app.get('/admin', (_request, reply) => reply.sendFile('index.html'));
-		app.get('/reset-password', (_request, reply) => reply.sendFile('index.html'));
+		app.get('/*', (_request, reply) => reply.sendFile('index.html'));
 	} else {
 		app.get('/', async () => ({
 			name: 'Y.auth',
-			version: '0.1.0',
+			version: VERSION,
 			ui: 'Run npm run dev:web',
 		}));
 	}

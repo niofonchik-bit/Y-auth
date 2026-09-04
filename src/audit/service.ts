@@ -27,6 +27,7 @@ export class AuditService {
 			sessionId: input.sessionId ?? null,
 			ip: input.request?.ip ?? null,
 			userAgent: input.request?.headers['user-agent'] ?? null,
+			requestId: input.request?.id ?? null,
 			reasonCode: input.reasonCode ?? null,
 			metadata: input.metadata ?? {},
 		});

@@ -1,11 +1,11 @@
-import { and, eq } from 'drizzle-orm';
+import { and, eq, isNull } from 'drizzle-orm';
 import type { FastifyReply, FastifyRequest } from 'fastify';
 import type { AuditService } from '../audit/service.js';
 import { normalizeEmail } from '../auth/service.js';
 import type { PolicyResolver } from '../clients/policy.js';
 import type { AppConfig } from '../config/env.js';
 import type { Database } from '../db/client.js';
-import { passwordCredentials, users } from '../db/schema.js';
+import { emailVerificationTokens, passwordCredentials, users } from '../db/schema.js';
 import { hashPassword, MAX_PASSWORD_LENGTH, validatePassword, verifyPassword } from '../security/password.js';
 import type { AuthenticatedSession, SessionService } from '../sessions/service.js';
 import { AppError } from '../shared/errors.js';
@@ -19,7 +19,7 @@ export class AccountService {
 		private readonly audit: AuditService,
 	) {}
 
-	private async verifyCurrentPassword(userId: string, password: string): Promise<void> {
+	async verifyCurrentPassword(userId: string, password: string): Promise<void> {
 		const [credential] = await this.db
 			.select({ passwordHash: passwordCredentials.passwordHash })
 			.from(passwordCredentials)
@@ -40,6 +40,13 @@ export class AccountService {
 			.where(eq(users.id, userId));
 	}
 
+	async updateProfile(userId: string, input: { displayName: string | null; locale: 'en' | 'ru' }): Promise<void> {
+		await this.db
+			.update(users)
+			.set({ displayName: input.displayName?.trim() || null, locale: input.locale, updatedAt: new Date() })
+			.where(eq(users.id, userId));
+	}
+
 	async changeEmail(auth: AuthenticatedSession, newEmail: string, currentPassword: string, request: FastifyRequest): Promise<void> {
 		await this.verifyCurrentPassword(auth.user.id, currentPassword);
 		const normalizedEmail = normalizeEmail(newEmail);
@@ -47,15 +54,16 @@ export class AccountService {
 			throw new AppError(400, 'INVALID_EMAIL', 'Email is invalid');
 		}
 		try {
-			await this.db
-				.update(users)
-				.set({
-					email: newEmail.trim(),
-					normalizedEmail,
-					emailVerifiedAt: null,
-					updatedAt: new Date(),
-				})
-				.where(eq(users.id, auth.user.id));
+			await this.db.transaction(async (tx) => {
+				await tx
+					.update(users)
+					.set({ email: newEmail.trim(), normalizedEmail, emailVerifiedAt: null, updatedAt: new Date() })
+					.where(eq(users.id, auth.user.id));
+				await tx
+					.update(emailVerificationTokens)
+					.set({ usedAt: new Date() })
+					.where(and(eq(emailVerificationTokens.userId, auth.user.id), isNull(emailVerificationTokens.usedAt)));
+			});
 		} catch (error) {
 			if (typeof error === 'object' && error && 'code' in error && error.code === '23505') {
 				throw new AppError(409, 'EMAIL_ALREADY_USED', 'Email is already used');
@@ -109,13 +117,15 @@ export class AccountService {
 		});
 	}
 
-	async deactivate(auth: AuthenticatedSession, request: FastifyRequest): Promise<void> {
+	async deactivate(auth: AuthenticatedSession, currentPassword: string, request: FastifyRequest): Promise<void> {
+		await this.verifyCurrentPassword(auth.user.id, currentPassword);
 		await this.db
 			.update(users)
 			.set({
 				status: 'deactivated',
 				deactivatedAt: new Date(),
-				purgeAfter: new Date(Date.now() + 30 * 24 * 60 * 60 * 1_000),
+				deletionRequestedAt: null,
+				purgeAfter: null,
 				updatedAt: new Date(),
 			})
 			.where(and(eq(users.id, auth.user.id), eq(users.status, 'active')));
@@ -127,5 +137,19 @@ export class AccountService {
 			targetUserId: auth.user.id,
 			request,
 		});
+	}
+
+	async scheduleDeletion(auth: AuthenticatedSession, currentPassword: string, confirmation: string, request: FastifyRequest): Promise<Date> {
+		await this.verifyCurrentPassword(auth.user.id, currentPassword);
+		if (confirmation !== auth.user.email) throw new AppError(400, 'CONFIRMATION_MISMATCH', 'Email confirmation does not match');
+		const requestedAt = new Date();
+		const purgeAfter = new Date(requestedAt.getTime() + 30 * 24 * 60 * 60 * 1_000);
+		await this.db
+			.update(users)
+			.set({ status: 'deactivated', deactivatedAt: requestedAt, deletionRequestedAt: requestedAt, purgeAfter, updatedAt: requestedAt })
+			.where(eq(users.id, auth.user.id));
+		await this.sessions.revokeAll(auth.user.id, 'account_deletion_scheduled');
+		await this.audit.write({ type: 'account.deletion.scheduled', success: true, actorUserId: auth.user.id, targetUserId: auth.user.id, request });
+		return purgeAfter;
 	}
 }

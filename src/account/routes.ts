@@ -6,7 +6,10 @@ import { verifyCsrf } from '../security/csrf.js';
 import type { SessionService } from '../sessions/service.js';
 import { createBearerAuthenticator, requireBrowserSession } from '../shared/auth.js';
 import { AppError } from '../shared/errors.js';
+import { desc, eq } from 'drizzle-orm';
+import { auditEvents, externalIdentities, userSessions, users } from '../db/schema.js';
 import type { AccountService } from './service.js';
+import type { MfaService } from '../mfa/service.js';
 
 interface CsrfBody {
 	csrfToken?: string;
@@ -26,9 +29,10 @@ export async function registerAccountRoutes(
 		sessions: SessionService;
 		audit: AuditService;
 		config: AppConfig;
+		mfa: MfaService;
 	},
 ) {
-	const { db, account, sessions, audit, config } = dependencies;
+	const { db, account, sessions, audit, config, mfa } = dependencies;
 	const authenticateBearer = createBearerAuthenticator(config, db);
 
 	app.get('/api/v1/account', async (request) => {
@@ -39,14 +43,17 @@ export async function registerAccountRoutes(
 			displayName: auth.user.displayName,
 			emailVerified: auth.user.emailVerifiedAt !== null,
 			status: auth.user.status,
+			isAdmin: auth.user.isAdmin,
+			locale: auth.user.locale,
+			avatarUrl: auth.user.avatarObjectKey ? `/avatars/${auth.user.id}?v=${auth.user.avatarVersion}` : null,
 			createdAt: auth.user.createdAt,
 		};
 	});
 
-	app.patch<{ Body: CsrfBody & { displayName: string | null } }>('/api/v1/account', async (request) => {
+	app.patch<{ Body: CsrfBody & { displayName: string | null; locale?: 'en' | 'ru' } }>('/api/v1/account', async (request) => {
 		requireCsrf(request, request.body.csrfToken, config);
 		const auth = await requireBrowserSession(request, sessions);
-		await account.updateDisplayName(auth.user.id, request.body.displayName);
+		await account.updateProfile(auth.user.id, { displayName: request.body.displayName, locale: request.body.locale ?? auth.user.locale });
 		return { updated: true };
 	});
 
@@ -59,6 +66,33 @@ export async function registerAccountRoutes(
 		return { changed: true };
 	});
 
+	app.get('/api/v1/account/security', async (request) => {
+		const auth = await requireBrowserSession(request, sessions);
+		return { mfa: await mfa.status(auth.user.id), emailVerified: Boolean(auth.user.emailVerifiedAt), passwordSet: true };
+	});
+
+	app.post<{ Body: CsrfBody & { currentPassword: string } }>('/api/v1/account/mfa/setup', async (request) => {
+		requireCsrf(request, request.body.csrfToken, config);
+		const auth = await requireBrowserSession(request, sessions);
+		await account.verifyCurrentPassword(auth.user.id, request.body.currentPassword);
+		return mfa.beginSetup(auth.user.id, auth.user.email);
+	});
+
+	app.post<{ Body: CsrfBody & { code: string } }>('/api/v1/account/mfa/enable', async (request) => {
+		requireCsrf(request, request.body.csrfToken, config);
+		const auth = await requireBrowserSession(request, sessions);
+		return { enabled: true, recoveryCodes: await mfa.enable(auth.user.id, request.body.code) };
+	});
+
+	app.post<{ Body: CsrfBody & { currentPassword: string; code: string } }>('/api/v1/account/mfa/disable', async (request) => {
+		requireCsrf(request, request.body.csrfToken, config);
+		const auth = await requireBrowserSession(request, sessions);
+		await account.verifyCurrentPassword(auth.user.id, request.body.currentPassword);
+		await mfa.verify(auth.user.id, request.body.code);
+		await mfa.disable(auth.user.id);
+		return { disabled: true };
+	});
+
 	app.post<{
 		Body: CsrfBody & { currentPassword: string; newEmail: string };
 	}>('/api/v1/account/change-email', async (request) => {
@@ -68,12 +102,74 @@ export async function registerAccountRoutes(
 		return { changed: true, emailVerified: false };
 	});
 
-	app.delete<{ Body: CsrfBody }>('/api/v1/account', async (request, reply) => {
+	app.post<{ Body: CsrfBody & { currentPassword: string } }>('/api/v1/account/deactivate', async (request, reply) => {
 		requireCsrf(request, request.body.csrfToken, config);
 		const auth = await requireBrowserSession(request, sessions);
-		await account.deactivate(auth, request);
+		await account.deactivate(auth, request.body.currentPassword, request);
 		sessions.clearCookie(reply);
 		return { deactivated: true };
+	});
+
+	app.post<{ Body: CsrfBody & { currentPassword: string; confirmation: string } }>('/api/v1/account/delete-request', async (request, reply) => {
+		requireCsrf(request, request.body.csrfToken, config);
+		const auth = await requireBrowserSession(request, sessions);
+		const purgeAfter = await account.scheduleDeletion(auth, request.body.currentPassword, request.body.confirmation, request);
+		sessions.clearCookie(reply);
+		return { scheduled: true, purgeAfter };
+	});
+
+	app.post<{ Body: CsrfBody & { currentPassword: string } }>('/api/v1/account/export', async (request, reply) => {
+		requireCsrf(request, request.body.csrfToken, config);
+		const auth = await requireBrowserSession(request, sessions);
+		await account.verifyCurrentPassword(auth.user.id, request.body.currentPassword);
+		const [profile, identities, ownSessions, ownAudit] = await Promise.all([
+			db
+				.select({
+					id: users.id,
+					email: users.email,
+					displayName: users.displayName,
+					locale: users.locale,
+					emailVerifiedAt: users.emailVerifiedAt,
+					createdAt: users.createdAt,
+				})
+				.from(users)
+				.where(eq(users.id, auth.user.id)),
+			db
+				.select({
+					provider: externalIdentities.provider,
+					providerEmail: externalIdentities.providerEmail,
+					createdAt: externalIdentities.createdAt,
+					lastUsedAt: externalIdentities.lastUsedAt,
+				})
+				.from(externalIdentities)
+				.where(eq(externalIdentities.userId, auth.user.id)),
+			db
+				.select({
+					id: userSessions.id,
+					createdAt: userSessions.createdAt,
+					lastSeenAt: userSessions.lastSeenAt,
+					expiresAt: userSessions.expiresAt,
+					lastIp: userSessions.lastIp,
+					revokedAt: userSessions.revokedAt,
+				})
+				.from(userSessions)
+				.where(eq(userSessions.userId, auth.user.id)),
+			db
+				.select({
+					type: auditEvents.type,
+					createdAt: auditEvents.createdAt,
+					success: auditEvents.success,
+					reasonCode: auditEvents.reasonCode,
+				})
+				.from(auditEvents)
+				.where(eq(auditEvents.targetUserId, auth.user.id))
+				.orderBy(desc(auditEvents.createdAt))
+				.limit(500),
+		]);
+		await audit.write({ type: 'account.data.exported', success: true, actorUserId: auth.user.id, targetUserId: auth.user.id, request });
+		return reply
+			.header('Content-Disposition', 'attachment; filename="y-auth-account.json"')
+			.send({ exportedAt: new Date(), profile: profile[0], externalIdentities: identities, sessions: ownSessions, securityHistory: ownAudit });
 	});
 
 	app.get('/api/v1/account/sessions', async (request) => {

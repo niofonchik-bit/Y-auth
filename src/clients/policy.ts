@@ -17,7 +17,7 @@ export function resolveEffectivePolicy(
 ): EffectivePolicy {
 	return {
 		registrationEnabled: overrides?.registrationEnabledOverride ?? global.registrationEnabled,
-		minPasswordLength: overrides?.minPasswordLengthOverride ?? global.minPasswordLength,
+		minPasswordLength: Math.max(global.minPasswordLength, overrides?.minPasswordLengthOverride ?? global.minPasswordLength),
 		captchaMode: global.captchaMode,
 	};
 }

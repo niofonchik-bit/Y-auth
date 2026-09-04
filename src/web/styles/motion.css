@@ -1,0 +1,46 @@
+.MuiButton-root {
+	position: relative;
+	overflow: hidden;
+	transition:
+		transform var(--duration-press) var(--ease-standard),
+		border-color var(--duration-hover),
+		background var(--duration-hover);
+}
+.MuiButton-root:not(.Mui-disabled):hover {
+	transform: translateY(-1px);
+}
+.MuiButton-root:not(.Mui-disabled):active {
+	transform: scale(0.985);
+}
+.MuiIconButton-root {
+	transition:
+		transform var(--duration-press) var(--ease-standard),
+		background var(--duration-hover);
+}
+.MuiIconButton-root:not(.Mui-disabled):active {
+	transform: scale(0.96);
+}
+::view-transition-old(root),
+::view-transition-new(root) {
+	animation: none;
+	mix-blend-mode: normal;
+}
+:root.theme-ripple::view-transition-new(root) {
+	clip-path: circle(0 at var(--theme-x) var(--theme-y));
+	animation: theme-ripple 420ms var(--ease-standard) forwards;
+}
+@keyframes theme-ripple {
+	to {
+		clip-path: circle(var(--theme-radius) at var(--theme-x) var(--theme-y));
+	}
+}
+@media (prefers-reduced-motion: reduce) {
+	*,
+	*::before,
+	*::after {
+		animation-duration: 0.01ms !important;
+		animation-iteration-count: 1 !important;
+		scroll-behavior: auto !important;
+		transition-duration: 0.01ms !important;
+	}
+}

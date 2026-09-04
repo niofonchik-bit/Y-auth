@@ -29,4 +29,10 @@ describe('client policy inheritance', () => {
 			captchaMode: 'adaptive',
 		});
 	});
+
+	it('does not allow a client override to weaken the global password minimum', () => {
+		expect(
+			resolveEffectivePolicy({ ...global, minPasswordLength: 15 }, { registrationEnabledOverride: null, minPasswordLengthOverride: 8 }),
+		).toMatchObject({ minPasswordLength: 15 });
+	});
 });

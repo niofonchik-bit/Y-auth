@@ -34,13 +34,13 @@ export class SessionService {
 		return hmacSha256(this.config.SESSION_HMAC_SECRET, token);
 	}
 
-	private setCookie(reply: FastifyReply, token: string): void {
+	private setCookie(reply: FastifyReply, token: string, persistent = true): void {
 		reply.setCookie(sessionCookieName(this.config), token, {
 			path: '/',
 			secure: this.config.isProduction,
 			httpOnly: true,
 			sameSite: 'lax',
-			maxAge: this.config.SSO_ABSOLUTE_TTL_SECONDS,
+			...(persistent ? { maxAge: this.config.SSO_ABSOLUTE_TTL_SECONDS } : {}),
 		});
 	}
 
@@ -48,7 +48,7 @@ export class SessionService {
 		reply.clearCookie(sessionCookieName(this.config), { path: '/' });
 	}
 
-	async create(userId: string, request: FastifyRequest, reply: FastifyReply): Promise<string> {
+	async create(userId: string, request: FastifyRequest, reply: FastifyReply, persistent = false): Promise<string> {
 		const token = randomToken(32);
 		const now = Date.now();
 		const [created] = await this.db
@@ -64,7 +64,7 @@ export class SessionService {
 			})
 			.returning({ id: userSessions.id });
 		if (!created) throw new Error('Session insert did not return a row');
-		this.setCookie(reply, token);
+		this.setCookie(reply, token, persistent);
 		return created.id;
 	}
 

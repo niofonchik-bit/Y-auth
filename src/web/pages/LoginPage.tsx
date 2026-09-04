@@ -1,7 +1,8 @@
-import { Alert, Box, Button, CircularProgress, Stack, TextField, Typography } from '@mui/material';
+import { Alert, Button, Checkbox, FormControlLabel, Stack, TextField, Typography } from '@mui/material';
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
-import { api } from '../api';
+import { api, ApiError } from '../api';
 import Turnstile from '../components/Turnstile';
 
 interface LoginContext {
@@ -11,11 +12,14 @@ interface LoginContext {
 }
 
 export default function LoginPage() {
+	const { t } = useTranslation();
 	const [params] = useSearchParams();
 	const [context, setContext] = useState<LoginContext>();
 	const [error, setError] = useState('');
+	const [mfaRequired, setMfaRequired] = useState(false);
 	const [loading, setLoading] = useState(false);
-	const returnTo = params.get('returnTo') === '/admin' ? '/admin' : '/account';
+	const requested = params.get('returnTo') ?? '/account/profile';
+	const returnTo = requested.startsWith('/admin') || requested.startsWith('/account') ? requested : '/account/profile';
 
 	useEffect(() => {
 		api<LoginContext>('/api/v1/auth/login-context')
@@ -25,7 +29,7 @@ export default function LoginPage() {
 
 	async function submit(event: React.FormEvent<HTMLFormElement>) {
 		event.preventDefault();
-		if (!context) return;
+		if (!context || loading) return;
 		setLoading(true);
 		setError('');
 		const form = new FormData(event.currentTarget);
@@ -35,33 +39,68 @@ export default function LoginPage() {
 				body: JSON.stringify({
 					email: form.get('email'),
 					password: form.get('password'),
+					mfaCode: form.get('mfaCode') || undefined,
+					keepSignedIn: form.get('keepSignedIn') === 'on',
 					captchaToken: form.get('cf-turnstile-response') || undefined,
 					csrfToken: context.csrfToken,
 				}),
 			});
 			window.location.assign(returnTo);
 		} catch (cause) {
-			setError(cause instanceof Error ? cause.message : 'Sign in failed');
+			if (cause instanceof ApiError && cause.code === 'MFA_REQUIRED') setMfaRequired(true);
+			setError(cause instanceof ApiError ? t(`errors.${cause.code ?? 'default'}`) : t('errors.default'));
 			setLoading(false);
 		}
 	}
 
 	return (
-		<Box component="form" onSubmit={submit} sx={{ maxWidth: 440, mx: 'auto', mt: 8 }}>
-			<Stack spacing={2.5}>
-				<Typography variant="h4">Sign in to Y.auth</Typography>
-				<Typography color="text.secondary">Use your central account to continue.</Typography>
-				{error && <Alert severity="error">{error}</Alert>}
-				<TextField name="email" label="Email" type="email" autoComplete="username" required autoFocus />
-				<TextField name="password" label="Password" type="password" autoComplete="current-password" required />
-				{context?.captchaRequired && context.turnstileSiteKey && <Turnstile siteKey={context.turnstileSiteKey} />}
-				{context?.captchaRequired && !context.turnstileSiteKey && (
-					<Alert severity="error">Security check is required but not configured.</Alert>
-				)}
-				<Button type="submit" variant="contained" size="large" disabled={!context || loading}>
-					{loading ? <CircularProgress size={24} /> : 'Sign in'}
-				</Button>
-			</Stack>
-		</Box>
+		<main className="auth-page">
+			<section className="auth-frame surface">
+				<div className="auth-panel">
+					<Stack component="form" onSubmit={submit} spacing={2.25} sx={{ maxWidth: 370, mx: 'auto' }}>
+						<div className="brand-logo">
+							<span className="brand-mark">Y</span> Y.auth
+						</div>
+						<div>
+							<Typography variant="h4">{t('auth.signIn')}</Typography>
+							<Typography color="text.secondary">{t('auth.continueTo', { client: 'Y.auth' })}</Typography>
+						</div>
+						{error && (
+							<Alert severity="error" aria-live="polite">
+								{error}
+							</Alert>
+						)}
+						<TextField name="email" label={t('auth.email')} type="email" autoComplete="username" required autoFocus />
+						<TextField name="password" label={t('auth.password')} type="password" autoComplete="current-password" required />
+						{mfaRequired && <TextField name="mfaCode" label={t('auth.mfa')} autoComplete="one-time-code" required autoFocus />}
+						<Stack direction="row" sx={{ justifyContent: 'space-between', alignItems: 'center' }}>
+							<FormControlLabel control={<Checkbox name="keepSignedIn" />} label={t('auth.keepSignedIn')} />
+							<Button href="/forgot-password" size="small">
+								{t('auth.forgot')}
+							</Button>
+						</Stack>
+						{context?.captchaRequired && context.turnstileSiteKey && <Turnstile siteKey={context.turnstileSiteKey} />}
+						<Button className={loading ? 'pending-edge' : ''} type="submit" variant="contained" disabled={!context || loading}>
+							{loading ? `${t('auth.signIn')}…` : t('auth.signIn')}
+						</Button>
+						<Button variant="outlined" href={`/auth/google/start?returnTo=${encodeURIComponent(returnTo)}`}>
+							{t('auth.google')}
+						</Button>
+					</Stack>
+				</div>
+				<div className="auth-brand">
+					<div className="brand-logo">
+						<span className="brand-mark">Y</span> Y.AUTH
+					</div>
+					<div>
+						<Typography variant="h3" sx={{ fontWeight: 600 }}>
+							Identity, precisely controlled.
+						</Typography>
+						<Typography sx={{ mt: 2 }}>One secure account for every connected application.</Typography>
+					</div>
+					<Typography variant="caption">{t('auth.secured')}</Typography>
+				</div>
+			</section>
+		</main>
 	);
 }

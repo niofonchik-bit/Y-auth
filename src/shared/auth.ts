@@ -1,9 +1,9 @@
-import { eq } from 'drizzle-orm';
+import { and, eq, gt, isNull } from 'drizzle-orm';
 import type { FastifyRequest } from 'fastify';
 import { createLocalJWKSet, type JSONWebKeySet, type JWTPayload, jwtVerify } from 'jose';
 import type { AppConfig } from '../config/env.js';
 import type { Database } from '../db/client.js';
-import { oauthClients, users } from '../db/schema.js';
+import { oauthClients, userSessions, users } from '../db/schema.js';
 import type { AuthenticatedSession, SessionService } from '../sessions/service.js';
 import { AppError } from './errors.js';
 
@@ -75,6 +75,26 @@ export function createBearerAuthenticator(config: AppConfig, db: Database) {
 		const audience = Array.isArray(verified.payload.aud) ? verified.payload.aud : [verified.payload.aud];
 		if (!client?.enabled || user?.status !== 'active' || !audience.includes(client.audience)) {
 			throw new AppError(401, 'TOKEN_INVALID', 'Access token is invalid');
+		}
+		const requestUrl = request.url ?? '';
+		if (requestUrl.startsWith('/api/v1/account/') || requestUrl.startsWith('/api/v1/admin/')) {
+			const sid = verified.payload.sid;
+			if (typeof sid !== 'string') throw new AppError(401, 'SESSION_REVOKED', 'Session is no longer active');
+			const now = new Date();
+			const [activeSession] = await db
+				.select({ id: userSessions.id })
+				.from(userSessions)
+				.where(
+					and(
+						eq(userSessions.oidcUid, sid),
+						eq(userSessions.userId, userId),
+						isNull(userSessions.revokedAt),
+						gt(userSessions.expiresAt, now),
+						gt(userSessions.absoluteExpiresAt, now),
+					),
+				)
+				.limit(1);
+			if (!activeSession) throw new AppError(401, 'SESSION_REVOKED', 'Session is no longer active');
 		}
 		return {
 			userId,

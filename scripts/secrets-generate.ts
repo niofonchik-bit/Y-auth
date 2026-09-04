@@ -6,4 +6,5 @@ process.stdout.write(`OIDC_COOKIE_KEYS=${secret()},${secret()}\n`);
 process.stdout.write(`SESSION_HMAC_SECRET=${secret()}\n`);
 process.stdout.write(`CSRF_HMAC_SECRET=${secret()}\n`);
 process.stdout.write(`RATE_LIMIT_HMAC_SECRET=${secret()}\n`);
+process.stdout.write(`MFA_ENCRYPTION_KEY=${randomBytes(32).toString('base64')}\n`);
 process.stdout.write('Store these values in the environment. They were not written to disk.\n');

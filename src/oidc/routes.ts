@@ -17,8 +17,11 @@ interface InteractionForm {
 	csrfToken?: string;
 	email?: string;
 	password?: string;
+	mfaCode?: string;
+	keepSignedIn?: string;
 	displayName?: string;
 	captchaToken?: string;
+	decision?: 'allow' | 'deny';
 }
 
 function stringValue(value: unknown): string | undefined {
@@ -114,6 +117,7 @@ export async function registerOidcRoutes(
 						firstParty: client.metadata().y_auth_first_party === true,
 					}
 				: null,
+			requestedScopes: (stringValue(details.params.scope) ?? 'openid').split(' ').filter(Boolean),
 			registrationEnabled: policy.registrationEnabled,
 			minPasswordLength: policy.minPasswordLength,
 			loginCaptchaRequired,
@@ -121,6 +125,35 @@ export async function registerOidcRoutes(
 			turnstileSiteKey: config.TURNSTILE_SITE_KEY ?? null,
 			csrfToken: issueCsrf(reply, config),
 		};
+	});
+
+	app.post<{ Params: InteractionParams; Body: InteractionForm }>('/interaction/:uid/consent', async (request, reply) => {
+		if (!verifyCsrf(request, request.body.csrfToken, config)) throw new AppError(403, 'CSRF_INVALID', 'Security token is invalid');
+		const details = await provider.interactionDetails(request.raw, reply.raw);
+		const clientId = stringValue(details.params.client_id);
+		const accountId = details.session?.accountId;
+		if (details.prompt.name !== 'consent' || !clientId || !accountId) throw new AppError(409, 'INTERACTION_MISMATCH', 'Consent is not expected');
+		if (request.body.decision === 'deny') {
+			await audit.write({ type: 'oidc.consent.denied', success: true, actorUserId: accountId, metadata: { clientId }, request });
+			await finish(provider, request, reply, { error: 'access_denied', error_description: 'The user denied access' });
+			return;
+		}
+		let grant = details.grantId ? await provider.Grant.find(details.grantId) : undefined;
+		if (!grant) grant = new provider.Grant({ accountId, clientId });
+		const requestedScope = stringValue(details.params.scope) ?? 'openid';
+		grant.addOIDCScope(requestedScope);
+		const client = await provider.Client.find(clientId);
+		const audience = client?.metadata().y_auth_audience;
+		if (typeof audience === 'string') grant.addResourceScope(audience, requestedScope);
+		const grantId = await grant.save();
+		await audit.write({
+			type: 'oidc.consent.allowed',
+			success: true,
+			actorUserId: accountId,
+			metadata: { clientId, scopes: requestedScope.split(' ') },
+			request,
+		});
+		await finish(provider, request, reply, { consent: { grantId } });
 	});
 
 	app.post<{ Params: InteractionParams; Body: InteractionForm }>('/interaction/:uid/login', async (request, reply) => {
@@ -138,6 +171,8 @@ export async function registerOidcRoutes(
 					email: request.body.email ?? '',
 					password: request.body.password ?? '',
 					...(request.body.captchaToken ? { captchaToken: request.body.captchaToken } : {}),
+					...(request.body.mfaCode ? { mfaCode: request.body.mfaCode } : {}),
+					keepSignedIn: request.body.keepSignedIn === 'true',
 				},
 				request,
 				reply,
@@ -152,7 +187,7 @@ export async function registerOidcRoutes(
 			login: {
 				accountId: result.user.id,
 				remember: true,
-				amr: ['pwd'],
+				amr: result.amr,
 			},
 		});
 	});

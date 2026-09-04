@@ -1,4 +1,4 @@
-import { and, count, desc, eq, ilike, isNull, sql } from 'drizzle-orm';
+import { count, desc, eq, ilike, isNull, sql } from 'drizzle-orm';
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import type { AuditService } from '../audit/service.js';
 import type { ClientInput, ClientService, ClientUpdateInput } from '../clients/service.js';
@@ -9,6 +9,7 @@ import { verifyCsrf } from '../security/csrf.js';
 import type { SessionService } from '../sessions/service.js';
 import { requireAdmin } from '../shared/auth.js';
 import { AppError } from '../shared/errors.js';
+import { VERSION } from '../version.js';
 
 interface CsrfBody {
 	csrfToken?: string;
@@ -19,9 +20,13 @@ function requireCsrf(request: FastifyRequest, token: unknown, config: AppConfig)
 }
 
 function pageParams(query: Record<string, unknown>) {
-	const limit = Math.min(100, Math.max(1, Number(query.limit) || 25));
-	const offset = Math.max(0, Number(query.offset) || 0);
-	return { limit, offset };
+	const pageSize = [25, 50, 100].includes(Number(query.pageSize)) ? Number(query.pageSize) : 25;
+	const page = Math.max(1, Math.floor(Number(query.page) || 1));
+	return { page, pageSize, limit: pageSize, offset: (page - 1) * pageSize };
+}
+
+function paged<T>(items: T[], page: number, pageSize: number, total: number) {
+	return { items, page, pageSize, total, totalPages: Math.max(1, Math.ceil(total / pageSize)) };
 }
 
 export async function registerAdminRoutes(
@@ -37,7 +42,7 @@ export async function registerAdminRoutes(
 ) {
 	const { db, clients, sessions, audit, config } = dependencies;
 
-	app.get('/api/v1/meta', async () => ({ name: 'Y.auth', version: '0.1.0' }));
+	app.get('/api/v1/meta', async () => ({ name: 'Y.auth', version: VERSION }));
 
 	app.get('/api/v1/admin/dashboard', async (request) => {
 		await requireAdmin(request, sessions);
@@ -52,7 +57,7 @@ export async function registerAdminRoutes(
 			dependencies.redisPing(),
 		]);
 		return {
-			version: '0.1.0',
+			version: VERSION,
 			status: database && redis ? 'ready' : 'degraded',
 			postgres: database ? 'up' : 'down',
 			redis: redis ? 'up' : 'down',
@@ -65,8 +70,9 @@ export async function registerAdminRoutes(
 
 	app.get<{ Querystring: Record<string, unknown> }>('/api/v1/admin/clients', async (request) => {
 		await requireAdmin(request, sessions);
-		const { limit, offset } = pageParams(request.query);
-		return { items: await clients.list(limit, offset), limit, offset };
+		const { page, pageSize, limit, offset } = pageParams(request.query);
+		const [items, [total]] = await Promise.all([clients.list(limit, offset), db.select({ value: count() }).from(oauthClients)]);
+		return paged(items, page, pageSize, total?.value ?? 0);
 	});
 
 	app.get<{ Params: { clientId: string } }>('/api/v1/admin/clients/:clientId', async (request) => {
@@ -141,25 +147,36 @@ export async function registerAdminRoutes(
 
 	app.get<{ Querystring: Record<string, unknown> }>('/api/v1/admin/users', async (request) => {
 		await requireAdmin(request, sessions);
-		const { limit, offset } = pageParams(request.query);
+		const { page, pageSize, limit, offset } = pageParams(request.query);
 		const search = typeof request.query.search === 'string' ? request.query.search.trim() : '';
-		const rows = await db
-			.select({
-				id: users.id,
-				email: users.email,
-				displayName: users.displayName,
-				status: users.status,
-				isAdmin: users.isAdmin,
-				createdAt: users.createdAt,
-				deactivatedAt: users.deactivatedAt,
-				purgeAfter: users.purgeAfter,
-			})
-			.from(users)
-			.where(search ? ilike(users.email, `%${search.replaceAll('%', '\\%').replaceAll('_', '\\_')}%`) : undefined)
-			.orderBy(desc(users.createdAt))
-			.limit(limit)
-			.offset(offset);
-		return { items: rows, limit, offset };
+		const where = search ? ilike(users.email, `%${search.replaceAll('%', '\\%').replaceAll('_', '\\_')}%`) : undefined;
+		const [rows, [total]] = await Promise.all([
+			db
+				.select({
+					id: users.id,
+					email: users.email,
+					displayName: users.displayName,
+					status: users.status,
+					isAdmin: users.isAdmin,
+					createdAt: users.createdAt,
+					deactivatedAt: users.deactivatedAt,
+					purgeAfter: users.purgeAfter,
+				})
+				.from(users)
+				.where(where)
+				.orderBy(desc(users.createdAt))
+				.limit(limit)
+				.offset(offset),
+			db.select({ value: count() }).from(users).where(where),
+		]);
+		return paged(rows, page, pageSize, total?.value ?? 0);
+	});
+
+	app.get<{ Params: { userId: string } }>('/api/v1/admin/users/:userId', async (request) => {
+		await requireAdmin(request, sessions);
+		const [user] = await db.select().from(users).where(eq(users.id, request.params.userId)).limit(1);
+		if (!user) throw new AppError(404, 'USER_NOT_FOUND', 'User not found');
+		return user;
 	});
 
 	app.post<{
@@ -174,7 +191,8 @@ export async function registerAdminRoutes(
 			.set({
 				status: active ? 'active' : 'deactivated',
 				deactivatedAt: active ? null : new Date(),
-				purgeAfter: active ? null : new Date(Date.now() + 30 * 24 * 60 * 60 * 1_000),
+				deletionRequestedAt: null,
+				purgeAfter: null,
 				updatedAt: new Date(),
 			})
 			.where(eq(users.id, request.params.userId));
@@ -209,7 +227,11 @@ export async function registerAdminRoutes(
 	}>('/api/v1/admin/users/:userId', async (request) => {
 		const admin = await requireAdmin(request, sessions);
 		requireCsrf(request, request.body.csrfToken, config);
-		const [target] = await db.select({ email: users.email }).from(users).where(eq(users.id, request.params.userId)).limit(1);
+		const [target] = await db
+			.select({ email: users.email, status: users.status })
+			.from(users)
+			.where(eq(users.id, request.params.userId))
+			.limit(1);
 		if (!target) throw new AppError(404, 'USER_NOT_FOUND', 'User not found');
 		if (target.email !== request.body.confirmEmail) {
 			throw new AppError(400, 'DELETE_CONFIRMATION_INVALID', 'Enter the exact user email to confirm deletion');
@@ -217,6 +239,9 @@ export async function registerAdminRoutes(
 		if (admin.user.id === request.params.userId) {
 			throw new AppError(409, 'SELF_DELETE_FORBIDDEN', 'An administrator cannot permanently delete the current account');
 		}
+		if (target.status !== 'deactivated') throw new AppError(409, 'USER_MUST_BE_DEACTIVATED', 'User must be deactivated first');
+		const [deleted] = await db.delete(users).where(eq(users.id, request.params.userId)).returning({ id: users.id });
+		if (!deleted) throw new AppError(409, 'USER_DELETE_FAILED', 'User was not deleted');
 		await audit.write({
 			type: 'user.deleted',
 			success: true,
@@ -225,31 +250,40 @@ export async function registerAdminRoutes(
 			metadata: { deletedUserId: request.params.userId },
 			request,
 		});
-		await db.delete(users).where(and(eq(users.id, request.params.userId), eq(users.status, 'deactivated')));
 		return { deleted: true };
 	});
 
 	app.get<{ Querystring: Record<string, unknown> }>('/api/v1/admin/sessions', async (request) => {
 		await requireAdmin(request, sessions);
-		const { limit, offset } = pageParams(request.query);
-		const items = await db
-			.select({
-				id: userSessions.id,
-				userId: userSessions.userId,
-				email: users.email,
-				createdAt: userSessions.createdAt,
-				lastSeenAt: userSessions.lastSeenAt,
-				expiresAt: userSessions.expiresAt,
-				lastIp: userSessions.lastIp,
-				userAgent: userSessions.userAgent,
-				revokedAt: userSessions.revokedAt,
-			})
-			.from(userSessions)
-			.innerJoin(users, eq(users.id, userSessions.userId))
-			.orderBy(desc(userSessions.lastSeenAt))
-			.limit(limit)
-			.offset(offset);
-		return { items, limit, offset };
+		const { page, pageSize, limit, offset } = pageParams(request.query);
+		const [items, [total]] = await Promise.all([
+			db
+				.select({
+					id: userSessions.id,
+					userId: userSessions.userId,
+					email: users.email,
+					createdAt: userSessions.createdAt,
+					lastSeenAt: userSessions.lastSeenAt,
+					expiresAt: userSessions.expiresAt,
+					lastIp: userSessions.lastIp,
+					userAgent: userSessions.userAgent,
+					revokedAt: userSessions.revokedAt,
+				})
+				.from(userSessions)
+				.innerJoin(users, eq(users.id, userSessions.userId))
+				.orderBy(desc(userSessions.lastSeenAt))
+				.limit(limit)
+				.offset(offset),
+			db.select({ value: count() }).from(userSessions),
+		]);
+		return paged(items, page, pageSize, total?.value ?? 0);
+	});
+
+	app.get<{ Params: { sessionId: string } }>('/api/v1/admin/sessions/:sessionId', async (request) => {
+		await requireAdmin(request, sessions);
+		const [session] = await db.select().from(userSessions).where(eq(userSessions.id, request.params.sessionId)).limit(1);
+		if (!session) throw new AppError(404, 'SESSION_NOT_FOUND', 'Session not found');
+		return session;
 	});
 
 	app.delete<{ Params: { sessionId: string }; Body: CsrfBody }>('/api/v1/admin/sessions/:sessionId', async (request) => {
@@ -275,16 +309,21 @@ export async function registerAdminRoutes(
 
 	app.get<{ Querystring: Record<string, unknown> }>('/api/v1/admin/audit', async (request) => {
 		await requireAdmin(request, sessions);
-		const { limit, offset } = pageParams(request.query);
+		const { page, pageSize, limit, offset } = pageParams(request.query);
 		const event = typeof request.query.event === 'string' ? request.query.event : undefined;
-		const items = await db
-			.select()
-			.from(auditEvents)
-			.where(event ? eq(auditEvents.type, event) : undefined)
-			.orderBy(desc(auditEvents.createdAt))
-			.limit(limit)
-			.offset(offset);
-		return { items, limit, offset };
+		const where = event ? eq(auditEvents.type, event) : undefined;
+		const [items, [total]] = await Promise.all([
+			db.select().from(auditEvents).where(where).orderBy(desc(auditEvents.createdAt)).limit(limit).offset(offset),
+			db.select({ value: count() }).from(auditEvents).where(where),
+		]);
+		return paged(items, page, pageSize, total?.value ?? 0);
+	});
+
+	app.get<{ Params: { eventId: string } }>('/api/v1/admin/audit/:eventId', async (request) => {
+		await requireAdmin(request, sessions);
+		const [event] = await db.select().from(auditEvents).where(eq(auditEvents.id, request.params.eventId)).limit(1);
+		if (!event) throw new AppError(404, 'AUDIT_EVENT_NOT_FOUND', 'Audit event not found');
+		return event;
 	});
 
 	app.get('/api/v1/admin/settings', async (request) => {

@@ -59,4 +59,4 @@ Integration and browser tests require disposable PostgreSQL and Redis instances.
 - `migrations` — reviewed SQL migrations
 - `tests` — unit, integration, security, and browser coverage
 
-See [EXAMPLE.md](EXAMPLE.md) for client integration patterns and the separately supplied `Y-auth-setup.md` for complete deployment instructions.
+See [EXAMPLE.md](EXAMPLE.md) for client integration patterns and the separately supplied `Y-auth-v2-setup.md` for complete deployment instructions.

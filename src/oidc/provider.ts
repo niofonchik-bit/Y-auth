@@ -29,7 +29,7 @@ export function createOidcProvider(config: AppConfig, db: Database, sessions: Se
 		jwks: config.jwks,
 		claims: {
 			openid: ['sub'],
-			profile: ['name'],
+			profile: ['name', 'picture'],
 			email: ['email', 'email_verified'],
 		},
 		scopes: ['openid', 'profile', 'email', 'offline_access', 'y_auth.sessions'],
@@ -46,6 +46,8 @@ export function createOidcProvider(config: AppConfig, db: Database, sessions: Se
 					email: users.email,
 					displayName: users.displayName,
 					emailVerifiedAt: users.emailVerifiedAt,
+					avatarObjectKey: users.avatarObjectKey,
+					avatarVersion: users.avatarVersion,
 					status: users.status,
 				})
 				.from(users)
@@ -57,6 +59,7 @@ export function createOidcProvider(config: AppConfig, db: Database, sessions: Se
 				claims: () => ({
 					sub: user.id,
 					name: user.displayName ?? user.email,
+					picture: user.avatarObjectKey ? `${config.issuer.origin}/avatars/${user.id}?v=${user.avatarVersion}` : undefined,
 					email: user.email,
 					email_verified: user.emailVerifiedAt !== null,
 				}),

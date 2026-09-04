@@ -4,6 +4,7 @@ import { bigint, boolean, index, integer, jsonb, pgEnum, pgTable, primaryKey, te
 export const userStatus = pgEnum('user_status', ['active', 'deactivated']);
 export const clientType = pgEnum('client_type', ['public', 'confidential']);
 export const captchaMode = pgEnum('captcha_mode', ['off', 'adaptive', 'always_registration']);
+export const userLocale = pgEnum('user_locale', ['en', 'ru']);
 
 const timestamps = {
 	createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
@@ -21,6 +22,11 @@ export const users = pgTable(
 		emailVerifiedAt: timestamp('email_verified_at', { withTimezone: true }),
 		deactivatedAt: timestamp('deactivated_at', { withTimezone: true }),
 		purgeAfter: timestamp('purge_after', { withTimezone: true }),
+		deletionRequestedAt: timestamp('deletion_requested_at', { withTimezone: true }),
+		locale: userLocale('locale').notNull().default('en'),
+		avatarObjectKey: text('avatar_object_key'),
+		avatarUpdatedAt: timestamp('avatar_updated_at', { withTimezone: true }),
+		avatarVersion: integer('avatar_version').notNull().default(0),
 		isAdmin: boolean('is_admin').notNull().default(false),
 		sessionVersion: integer('session_version').notNull().default(1),
 		...timestamps,
@@ -165,15 +171,83 @@ export const passwordResetTokens = pgTable(
 	(table) => [uniqueIndex('password_reset_token_hash_unique').on(table.tokenHash), index('password_reset_expires_idx').on(table.expiresAt)],
 );
 
+export const emailVerificationTokens = pgTable(
+	'email_verification_tokens',
+	{
+		id: uuid('id').primaryKey().defaultRandom(),
+		userId: uuid('user_id')
+			.notNull()
+			.references(() => users.id, { onDelete: 'cascade' }),
+		tokenHash: text('token_hash').notNull(),
+		expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+		usedAt: timestamp('used_at', { withTimezone: true }),
+		createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+	},
+	(table) => [
+		uniqueIndex('email_verification_token_hash_unique').on(table.tokenHash),
+		index('email_verification_user_idx').on(table.userId),
+		index('email_verification_expires_idx').on(table.expiresAt),
+	],
+);
+
+export const externalIdentities = pgTable(
+	'external_identities',
+	{
+		id: uuid('id').primaryKey().defaultRandom(),
+		userId: uuid('user_id')
+			.notNull()
+			.references(() => users.id, { onDelete: 'cascade' }),
+		provider: text('provider').notNull(),
+		providerSubject: text('provider_subject').notNull(),
+		providerEmail: text('provider_email'),
+		providerEmailVerified: boolean('provider_email_verified').notNull().default(false),
+		lastUsedAt: timestamp('last_used_at', { withTimezone: true }),
+		...timestamps,
+	},
+	(table) => [
+		uniqueIndex('external_identities_provider_subject_unique').on(table.provider, table.providerSubject),
+		index('external_identities_user_idx').on(table.userId),
+	],
+);
+
+export const userMfaTotp = pgTable('user_mfa_totp', {
+	userId: uuid('user_id')
+		.primaryKey()
+		.references(() => users.id, { onDelete: 'cascade' }),
+	secretCiphertext: text('secret_ciphertext').notNull(),
+	secretIv: text('secret_iv').notNull(),
+	secretTag: text('secret_tag').notNull(),
+	enabledAt: timestamp('enabled_at', { withTimezone: true }),
+	lastUsedAt: timestamp('last_used_at', { withTimezone: true }),
+	lastAcceptedTimeStep: bigint('last_accepted_time_step', { mode: 'number' }),
+	...timestamps,
+});
+
+export const mfaRecoveryCodes = pgTable(
+	'mfa_recovery_codes',
+	{
+		id: uuid('id').primaryKey().defaultRandom(),
+		userId: uuid('user_id')
+			.notNull()
+			.references(() => users.id, { onDelete: 'cascade' }),
+		codeHash: text('code_hash').notNull(),
+		createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+		usedAt: timestamp('used_at', { withTimezone: true }),
+	},
+	(table) => [uniqueIndex('mfa_recovery_code_hash_unique').on(table.codeHash), index('mfa_recovery_user_idx').on(table.userId)],
+);
+
 export const globalSettings = pgTable('global_settings', {
 	id: integer('id').primaryKey().default(1),
 	registrationEnabled: boolean('registration_enabled').notNull().default(true),
-	minPasswordLength: integer('min_password_length').notNull().default(6),
+	minPasswordLength: integer('min_password_length').notNull().default(15),
 	captchaMode: captchaMode('captcha_mode').notNull().default('adaptive'),
 	accessTokenTtlSeconds: integer('access_token_ttl_seconds').notNull().default(600),
 	ssoIdleTtlSeconds: integer('sso_idle_ttl_seconds').notNull().default(604_800),
 	ssoAbsoluteTtlSeconds: integer('sso_absolute_ttl_seconds').notNull().default(2_592_000),
 	refreshTokenTtlSeconds: integer('refresh_token_ttl_seconds').notNull().default(7_776_000),
+	accountDeletionGraceDays: integer('account_deletion_grace_days').notNull().default(30),
+	emailVerificationTtlSeconds: integer('email_verification_ttl_seconds').notNull().default(86_400),
 	updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });
 
@@ -202,6 +276,7 @@ export const auditEvents = pgTable(
 		userAgent: text('user_agent'),
 		success: boolean('success').notNull(),
 		reasonCode: text('reason_code'),
+		requestId: text('request_id'),
 		metadata: jsonb('metadata')
 			.$type<Record<string, unknown>>()
 			.notNull()
@@ -213,6 +288,7 @@ export const auditEvents = pgTable(
 		index('audit_events_actor_idx').on(table.actorUserId),
 		index('audit_events_target_idx').on(table.targetUserId),
 		index('audit_events_client_idx').on(table.clientId),
+		index('audit_events_request_idx').on(table.requestId),
 	],
 );
 

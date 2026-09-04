@@ -23,6 +23,19 @@ const schema = z.object({
 	SESSION_HMAC_SECRET: z.string().min(MIN_SECRET_BYTES),
 	CSRF_HMAC_SECRET: z.string().min(MIN_SECRET_BYTES),
 	RATE_LIMIT_HMAC_SECRET: z.string().min(MIN_SECRET_BYTES),
+	MFA_ENCRYPTION_KEY: z.string().optional(),
+	MFA_ENABLED: booleanString,
+	GOOGLE_AUTH_ENABLED: booleanString,
+	GOOGLE_CLIENT_ID: z.string().optional(),
+	GOOGLE_CLIENT_SECRET: z.string().optional(),
+	GOOGLE_REDIRECT_URI: z.string().url().optional(),
+	S3_ENDPOINT: z.string().url().optional(),
+	S3_REGION: z.string().default('auto'),
+	S3_BUCKET: z.string().optional(),
+	S3_ACCESS_KEY_ID: z.string().optional(),
+	S3_SECRET_ACCESS_KEY: z.string().optional(),
+	AVATAR_ENABLED: booleanString,
+	APP_ENVIRONMENT: z.enum(['development', 'production']).default('production'),
 	RESEND_API_KEY: z.string().optional(),
 	MAIL_FROM: z.string().optional(),
 	TURNSTILE_SITE_KEY: z.string().optional(),
@@ -37,6 +50,7 @@ const schema = z.object({
 	SSO_ABSOLUTE_TTL_SECONDS: positiveInteger(2_592_000),
 	REFRESH_TOKEN_TTL_SECONDS: positiveInteger(7_776_000),
 	PASSWORD_RESET_TTL_SECONDS: positiveInteger(900),
+	EMAIL_VERIFICATION_TTL_SECONDS: positiveInteger(86_400),
 	SESSION_ACTIVITY_INTERVAL_SECONDS: positiveInteger(300),
 	ARGON2_MEMORY_KIB: positiveInteger(19_456),
 	ARGON2_ITERATIONS: positiveInteger(2),
@@ -117,8 +131,21 @@ export function loadConfig(environment?: NodeJS.ProcessEnv): AppConfig {
 	if (isProduction && issuer.protocol !== 'https:') {
 		throw new Error('Production AUTH_ISSUER must use HTTPS');
 	}
-	if (isProduction && issuer.origin !== 'https://auth.niofon.com') {
+	if (isProduction && raw.APP_ENVIRONMENT === 'production' && issuer.origin !== 'https://auth.niofon.com') {
 		throw new Error('Production AUTH_ISSUER must be exactly https://auth.niofon.com');
+	}
+	if (raw.APP_ENVIRONMENT === 'development' && isProduction && issuer.protocol !== 'https:') {
+		throw new Error('Deployed development AUTH_ISSUER must use HTTPS');
+	}
+	if (raw.MFA_ENABLED) {
+		const key = raw.MFA_ENCRYPTION_KEY ? Buffer.from(raw.MFA_ENCRYPTION_KEY, 'base64') : Buffer.alloc(0);
+		if (key.length !== 32) throw new Error('MFA_ENCRYPTION_KEY must be a base64-encoded 32-byte key');
+	}
+	if (raw.GOOGLE_AUTH_ENABLED && (!raw.GOOGLE_CLIENT_ID || !raw.GOOGLE_CLIENT_SECRET || !raw.GOOGLE_REDIRECT_URI)) {
+		throw new Error('Google authentication requires client ID, client secret and redirect URI');
+	}
+	if (raw.AVATAR_ENABLED && (!raw.S3_ENDPOINT || !raw.S3_BUCKET || !raw.S3_ACCESS_KEY_ID || !raw.S3_SECRET_ACCESS_KEY)) {
+		throw new Error('Avatar storage requires complete S3 configuration');
 	}
 	if (raw.REFRESH_TOKEN_TTL_SECONDS <= raw.ACCESS_TOKEN_TTL_SECONDS) {
 		throw new Error('Refresh token TTL must be longer than access token TTL');

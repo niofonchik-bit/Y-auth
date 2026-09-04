@@ -15,6 +15,13 @@
 			"when": 1788261852126,
 			"tag": "0001_client_project_identity",
 			"breakpoints": true
+		},
+		{
+			"idx": 2,
+			"version": "7",
+			"when": 1788426717621,
+			"tag": "0002_free_maddog",
+			"breakpoints": true
 		}
 	]
 }
