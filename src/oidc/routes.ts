@@ -33,10 +33,11 @@ async function finish(
 	request: FastifyRequest,
 	reply: FastifyReply,
 	result: Parameters<Provider['interactionFinished']>[2],
+	mergeWithLastSubmission = false,
 ): Promise<void> {
 	reply.hijack();
 	await provider.interactionFinished(request.raw, reply.raw, result, {
-		mergeWithLastSubmission: false,
+		mergeWithLastSubmission,
 	});
 }
 
@@ -58,7 +59,7 @@ async function acceptFirstPartyConsent(provider: Provider, request: FastifyReque
 	const audience = client.metadata().y_auth_audience;
 	if (typeof audience === 'string') grant.addResourceScope(audience, requestedScope);
 	const grantId = await grant.save();
-	await finish(provider, request, reply, { consent: { grantId } });
+	await finish(provider, request, reply, { consent: { grantId } }, true);
 	return true;
 }
 
@@ -153,7 +154,7 @@ export async function registerOidcRoutes(
 			metadata: { clientId, scopes: requestedScope.split(' ') },
 			request,
 		});
-		await finish(provider, request, reply, { consent: { grantId } });
+		await finish(provider, request, reply, { consent: { grantId } }, true);
 	});
 
 	app.post<{ Params: InteractionParams; Body: InteractionForm }>('/interaction/:uid/login', async (request, reply) => {
