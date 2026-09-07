@@ -117,6 +117,9 @@ export function SecurityPage() {
 	const [csrf, setCsrf] = useState('');
 	const [setup, setSetup] = useState<{ manualSecret: string; qrDataUrl: string }>();
 	const [codes, setCodes] = useState<string[]>();
+	const [passwordMessage, setPasswordMessage] = useState<{ severity: 'success' | 'error'; text: string }>();
+	const [passwordPending, setPasswordPending] = useState(false);
+
 	const load = useCallback(
 		() =>
 			Promise.all([api<typeof data>('/api/v1/account/security'), csrfToken()]).then(([value, token]) => {
@@ -125,9 +128,50 @@ export function SecurityPage() {
 			}),
 		[],
 	);
+
 	useEffect(() => {
 		load();
 	}, [load]);
+
+	async function changePassword(event: FormEvent<HTMLFormElement>) {
+		event.preventDefault();
+
+		const formElement = event.currentTarget;
+		const form = new FormData(formElement);
+		const currentPassword = String(form.get('currentPassword') ?? '');
+		const newPassword = String(form.get('newPassword') ?? '');
+		const confirmation = String(form.get('confirmation') ?? '');
+
+		if (newPassword !== confirmation) {
+			setPasswordMessage({ severity: 'error', text: 'New passwords do not match.' });
+			return;
+		}
+
+		setPasswordPending(true);
+		setPasswordMessage(undefined);
+
+		try {
+			await api<{ changed: boolean }>('/api/v1/account/change-password', {
+				method: 'POST',
+				body: JSON.stringify({
+					currentPassword,
+					newPassword,
+					csrfToken: csrf,
+				}),
+			});
+
+			formElement.reset();
+			setPasswordMessage({ severity: 'success', text: 'Password changed.' });
+		} catch (error) {
+			setPasswordMessage({
+				severity: 'error',
+				text: error instanceof Error ? error.message : 'Unable to change password.',
+			});
+		} finally {
+			setPasswordPending(false);
+		}
+	}
+
 	async function begin(event: FormEvent<HTMLFormElement>) {
 		event.preventDefault();
 		const form = new FormData(event.currentTarget);
@@ -138,6 +182,7 @@ export function SecurityPage() {
 			}),
 		);
 	}
+
 	async function enable(event: FormEvent<HTMLFormElement>) {
 		event.preventDefault();
 		const form = new FormData(event.currentTarget);
@@ -161,6 +206,26 @@ export function SecurityPage() {
 						</Button>
 					)}
 				</div>
+
+				<div className="surface section">
+					<h2>Change password</h2>
+					<p>Changing your password signs out your other sessions.</p>
+
+					<Stack component="form" onSubmit={changePassword} spacing={2}>
+						<TextField name="currentPassword" type="password" label="Current password" autoComplete="current-password" required />
+
+						<TextField name="newPassword" type="password" label="New password" autoComplete="new-password" required />
+
+						<TextField name="confirmation" type="password" label="Confirm new password" autoComplete="new-password" required />
+
+						{passwordMessage && <Alert severity={passwordMessage.severity}>{passwordMessage.text}</Alert>}
+
+						<Button type="submit" variant="contained" disabled={passwordPending}>
+							{passwordPending ? 'Changing…' : 'Change password'}
+						</Button>
+					</Stack>
+				</div>
+
 				<div className="surface section">
 					<h2>Two-factor authentication</h2>
 					<p>{data?.mfa.enabled ? `Enabled · ${data.mfa.recoveryCodesRemaining} recovery codes remain` : 'Not enabled'}</p>
