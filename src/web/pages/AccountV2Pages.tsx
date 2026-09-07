@@ -216,7 +216,7 @@ export function SessionsPage() {
 					<Stack
 						key={item.id}
 						direction="row"
-						className="section"
+						className="section session-row"
 						sx={{ justifyContent: 'space-between', borderBottom: '1px solid var(--border-subtle)' }}
 					>
 						<div>

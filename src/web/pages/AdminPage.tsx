@@ -248,7 +248,7 @@ export default function AdminPage() {
 	};
 
 	return (
-		<Stack spacing={3}>
+		<Stack spacing={3} className="page legacy-admin">
 			<Stack
 				direction={{ xs: 'column', sm: 'row' }}
 				sx={{

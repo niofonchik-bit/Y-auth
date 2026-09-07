@@ -1,3 +1,4 @@
+import AppearanceControls from '../components/AppearanceControls';
 import { Alert, Button, Stack, TextField, Typography } from '@mui/material';
 import { type FormEvent, useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
@@ -7,6 +8,9 @@ export function SystemPage({ code }: { code: 403 | 404 | 500 }) {
 	const title = code === 403 ? 'Access denied' : code === 404 ? 'Page not found' : 'Something went wrong';
 	return (
 		<main className="auth-page">
+			<div className="auth-controls">
+				<AppearanceControls />
+			</div>
 			<section className="surface section" style={{ maxWidth: 520 }}>
 				<Typography variant="overline">Error {code}</Typography>
 				<Typography variant="h4">{title}</Typography>
@@ -37,6 +41,9 @@ export function VerifyEmailPage() {
 	}, [params]);
 	return (
 		<main className="auth-page">
+			<div className="auth-controls">
+				<AppearanceControls />
+			</div>
 			<section className={`surface section${state === 'pending' ? ' pending-edge' : ''}`}>
 				<Typography variant="h4">
 					{state === 'pending' ? 'Verifying email…' : state === 'success' ? 'Email verified' : 'Verification link is invalid or expired'}
@@ -75,6 +82,9 @@ export function RegisterPage() {
 	}
 	return (
 		<main className="auth-page">
+			<div className="auth-controls">
+				<AppearanceControls />
+			</div>
 			<section className="auth-frame surface">
 				<div className="auth-brand">
 					<div className="brand-logo">

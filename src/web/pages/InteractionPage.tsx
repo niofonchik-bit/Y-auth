@@ -1,4 +1,5 @@
-import { Alert, Box, Button, Checkbox, FormControlLabel, Paper, Stack, TextField, Typography } from '@mui/material';
+import AuthCard from '../components/AuthCard';
+import { Alert, Box, Button, Checkbox, FormControlLabel, Stack, TextField, Typography } from '@mui/material';
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { api } from '../api';
@@ -39,12 +40,17 @@ export default function InteractionPage() {
 		return () => controller.abort();
 	}, [uid]);
 
-	if (error) return <Alert severity="error">{error}</Alert>;
+	if (error)
+		return (
+			<AuthCard>
+				<Alert severity="error">{error}</Alert>
+			</AuthCard>
+		);
 	if (!interaction || !uid)
 		return (
-			<Box sx={{ display: 'grid', placeItems: 'center', py: 12 }}>
+			<AuthCard>
 				<div className="skeleton" style={{ width: 240, height: 4 }} />
-			</Box>
+			</AuthCard>
 		);
 
 	const isRegistration = registrationMode;
@@ -52,7 +58,7 @@ export default function InteractionPage() {
 	const captchaRequired = isRegistration ? interaction.registrationCaptchaRequired : interaction.loginCaptchaRequired;
 	if (interaction.prompt === 'consent') {
 		return (
-			<Paper sx={{ maxWidth: 480, mx: 'auto', p: 4 }}>
+			<AuthCard>
 				<Typography variant="h5" gutterBottom>
 					Authorize {interaction.client?.name ?? 'application'}
 				</Typography>
@@ -85,12 +91,12 @@ export default function InteractionPage() {
 						Allow
 					</Button>
 				</Box>
-			</Paper>
+			</AuthCard>
 		);
 	}
 
 	return (
-		<Paper component="main" sx={{ maxWidth: 440, mx: 'auto', p: { xs: 3, sm: 4 } }}>
+		<AuthCard>
 			<Stack spacing={3}>
 				<Box>
 					<Typography variant="h4" component="h1">
@@ -169,6 +175,6 @@ export default function InteractionPage() {
 					</Box>
 				)}
 			</Stack>
-		</Paper>
+		</AuthCard>
 	);
 }

@@ -1,4 +1,6 @@
-import { CssBaseline, createTheme, ThemeProvider } from '@mui/material';
+import { useEffect, useMemo, useState } from 'react';
+import { createPortalTheme } from './muiTheme';
+import { CssBaseline, ThemeProvider } from '@mui/material';
 import { Navigate, Route, Routes } from 'react-router-dom';
 import PortalShell from './components/PortalShell';
 import { DangerPage, ProfilePage, SecurityPage, SessionsPage } from './pages/AccountV2Pages';
@@ -8,31 +10,14 @@ import LoginPage from './pages/LoginPage';
 import ResetPasswordPage from './pages/ResetPasswordPage';
 import { RegisterPage, SystemPage, VerifyEmailPage } from './pages/SystemPages';
 
-const theme = createTheme({
-	shape: { borderRadius: 4 },
-	typography: { fontFamily: 'Inter, ui-sans-serif, system-ui, sans-serif', fontSize: 13 },
-	palette: { primary: { main: '#159a61' }, error: { main: '#cd2b31' }, background: { default: '#f4f7f5', paper: '#ffffff' } },
-	components: {
-		MuiCssBaseline: { styleOverrides: { body: { background: 'var(--bg-primary)', color: 'var(--text-primary)' } } },
-		MuiPaper: {
-			styleOverrides: {
-				root: {
-					color: 'var(--text-primary)',
-					backgroundColor: 'var(--bg-surface)',
-					backgroundImage: 'none',
-					borderRadius: 'var(--radius-md)',
-				},
-			},
-		},
-		MuiTextField: { defaultProps: { size: 'small' } },
-		MuiButton: {
-			defaultProps: { disableElevation: true },
-			styleOverrides: { root: { minHeight: 36, borderRadius: 'var(--radius-sm)', textTransform: 'none', fontWeight: 600 } },
-		},
-	},
-});
-
 export default function App() {
+	const [mode, setMode] = useState<'light' | 'dark'>(() => (document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light'));
+	useEffect(() => {
+		const observer = new MutationObserver(() => setMode(document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light'));
+		observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+		return () => observer.disconnect();
+	}, []);
+	const theme = useMemo(() => createPortalTheme(mode), [mode]);
 	return (
 		<ThemeProvider theme={theme}>
 			<CssBaseline />

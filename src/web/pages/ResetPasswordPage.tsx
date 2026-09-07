@@ -1,4 +1,5 @@
-import { Alert, Paper, Stack, TextField, Typography } from '@mui/material';
+import AuthCard from '../components/AuthCard';
+import { Alert, Button, Stack, TextField, Typography } from '@mui/material';
 import { type FormEvent, useEffect, useState } from 'react';
 import { api, csrfToken } from '../api';
 import AsyncButton from '../components/AsyncButton';
@@ -64,9 +65,12 @@ export default function ResetPasswordPage() {
 	};
 
 	return (
-		<Paper sx={{ maxWidth: 440, mx: 'auto', p: 4 }}>
-			<Typography variant="h4" gutterBottom>
+		<AuthCard>
+			<Typography variant="h4" component="h1" gutterBottom>
 				{token ? 'Choose a new password' : 'Reset password'}
+			</Typography>
+			<Typography color="text.secondary" sx={{ mb: 3 }}>
+				{token ? 'Set a new password for your account.' : 'Enter your email to receive reset instructions.'}
 			</Typography>
 			<Stack component="form" spacing={2.5} onSubmit={submit}>
 				{token ? (
@@ -79,6 +83,9 @@ export default function ResetPasswordPage() {
 					{token ? 'Change password' : 'Send reset instructions'}
 				</AsyncButton>
 			</Stack>
-		</Paper>
+			<Button href="/login" sx={{ mt: 2 }}>
+				Back to sign in
+			</Button>
+		</AuthCard>
 	);
 }

@@ -1,3 +1,5 @@
+import ShieldOutlined from '@mui/icons-material/ShieldOutlined';
+import AppearanceControls from '../components/AppearanceControls';
 import { Alert, Button, Checkbox, FormControlLabel, Stack, TextField, Typography } from '@mui/material';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -55,6 +57,9 @@ export default function LoginPage() {
 
 	return (
 		<main className="auth-page">
+			<div className="auth-controls">
+				<AppearanceControls />
+			</div>
 			<section className="auth-frame surface">
 				<div className="auth-panel">
 					<Stack component="form" onSubmit={submit} spacing={2.25} sx={{ maxWidth: 370, mx: 'auto' }}>
@@ -62,7 +67,9 @@ export default function LoginPage() {
 							<span className="brand-mark">Y</span> Y.auth
 						</div>
 						<div>
-							<Typography variant="h4">{t('auth.signIn')}</Typography>
+							<Typography variant="h4" component="h1">
+								{t('auth.signIn')}
+							</Typography>
 							<Typography color="text.secondary">{t('auth.continueTo', { client: 'Y.auth' })}</Typography>
 						</div>
 						{error && (
@@ -93,6 +100,11 @@ export default function LoginPage() {
 						<span className="brand-mark">Y</span> Y.AUTH
 					</div>
 					<div>
+						<div className="identity-art" aria-hidden="true">
+							<div className="identity-core">
+								<ShieldOutlined />
+							</div>
+						</div>
 						<Typography variant="h3" sx={{ fontWeight: 600 }}>
 							Identity, precisely controlled.
 						</Typography>

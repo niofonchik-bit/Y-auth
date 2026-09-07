@@ -1,24 +1,79 @@
-.MuiButton-root {
-	position: relative;
-	overflow: hidden;
-	transition:
-		transform var(--duration-press) var(--ease-standard),
-		border-color var(--duration-hover),
-		background var(--duration-hover);
+/* Animate visual containers, never remount forms or restart requests for a transition. */
+.page,
+.route-content > .MuiStack-root,
+.auth-frame,
+.auth-single,
+.auth-page > .surface.section {
+	animation: page-enter var(--duration-page) var(--ease-standard) both;
 }
-.MuiButton-root:not(.Mui-disabled):hover {
-	transform: translateY(-1px);
+.metric-card {
+	animation: card-enter 420ms var(--ease-standard) both;
+}
+.metric-card:nth-child(2) {
+	animation-delay: 45ms;
+}
+.metric-card:nth-child(3) {
+	animation-delay: 90ms;
+}
+.metric-card:nth-child(4) {
+	animation-delay: 135ms;
+}
+.overview-grid > .surface {
+	animation: page-enter 420ms 140ms var(--ease-standard) both;
+}
+.MuiAlert-root {
+	animation: page-enter 220ms var(--ease-standard);
+}
+.MuiButton-root,
+.MuiIconButton-root,
+.sidebar-link,
+.quick-link,
+.quick-link > svg,
+.data-table tr,
+.metric-card,
+.session-row {
+	transition:
+		transform var(--duration-hover) var(--ease-standard),
+		background-color var(--duration-hover),
+		border-color var(--duration-hover),
+		color var(--duration-hover),
+		box-shadow var(--duration-hover);
 }
 .MuiButton-root:not(.Mui-disabled):active {
-	transform: scale(0.985);
-}
-.MuiIconButton-root {
-	transition:
-		transform var(--duration-press) var(--ease-standard),
-		background var(--duration-hover);
+	transform: scale(0.98);
 }
 .MuiIconButton-root:not(.Mui-disabled):active {
-	transform: scale(0.96);
+	transform: scale(0.92);
+}
+@media (hover: hover) {
+	.MuiButton-root:not(.Mui-disabled):hover {
+		transform: translateY(-1px);
+	}
+	.sidebar-link:hover > svg {
+		transform: translateX(2px);
+	}
+	.metric-card:hover {
+		border-color: var(--accent-border);
+		box-shadow: var(--shadow-card);
+	}
+	.quick-link:hover {
+		color: var(--accent-primary);
+	}
+	.quick-link:hover > svg:last-child {
+		transform: translateX(4px);
+	}
+	.session-row:hover {
+		background: var(--bg-surface-hover);
+	}
+}
+.sidebar-link > svg {
+	transition: transform 180ms var(--ease-standard);
+}
+.identity-art {
+	animation: identity-enter 800ms var(--ease-standard) both;
+}
+.auth-brand::before {
+	animation: ambient-enter 1200ms ease-out both;
 }
 ::view-transition-old(root),
 ::view-transition-new(root) {
@@ -28,6 +83,54 @@
 :root.theme-ripple::view-transition-new(root) {
 	clip-path: circle(0 at var(--theme-x) var(--theme-y));
 	animation: theme-ripple 420ms var(--ease-standard) forwards;
+}
+@keyframes page-enter {
+	from {
+		opacity: 0;
+		transform: translateY(8px);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
+}
+@keyframes card-enter {
+	from {
+		opacity: 0;
+		transform: translateY(12px) scale(0.98);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0) scale(1);
+	}
+}
+@keyframes identity-enter {
+	from {
+		opacity: 0;
+		transform: translateY(12px) rotate(-8deg);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0) rotate(0);
+	}
+}
+@keyframes ambient-enter {
+	from {
+		opacity: 0;
+	}
+	to {
+		opacity: 1;
+	}
+}
+@keyframes skeleton {
+	to {
+		background-position: -220% 0;
+	}
+}
+@keyframes pending-edge {
+	50% {
+		transform: translateX(160%);
+	}
 }
 @keyframes theme-ripple {
 	to {
@@ -39,8 +142,13 @@
 	*::before,
 	*::after {
 		animation-duration: 0.01ms !important;
+		animation-delay: 0ms !important;
 		animation-iteration-count: 1 !important;
 		scroll-behavior: auto !important;
 		transition-duration: 0.01ms !important;
 	}
+}
+.legacy-admin > .MuiStack-root,
+.legacy-admin > form {
+	animation: page-enter var(--duration-page) var(--ease-standard);
 }
