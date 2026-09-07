@@ -182,6 +182,12 @@ export async function buildApp(environment?: NodeJS.ProcessEnv) {
 	}
 
 	app.addHook('onRequest', async (request) => {
+		const path = sanitizedPath(request.url);
+
+		if (path === '/health/live' || path === '/health/ready') {
+			return;
+		}
+
 		if (config.isProduction) {
 			const hostname = request.headers.host?.split(':')[0];
 			if (hostname !== config.issuer.hostname) {
