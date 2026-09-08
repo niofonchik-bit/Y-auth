@@ -205,13 +205,17 @@ export class AuthService {
 		reply: FastifyReply,
 	) {
 		const normalizedEmail = normalizeEmail(input.email);
-		const [accountLimit, ipLimit] = await Promise.all([
-			this.rateLimiter.consume('login-account-ip', `${normalizedEmail}|${request.ip}`, 5, 600),
+		const accountIdentity = `${normalizedEmail}|${request.ip}`;
+
+		const [accountAttempts, ipLimit] = await Promise.all([
+			this.rateLimiter.peek('login-account-ip', accountIdentity),
 			this.rateLimiter.consume('login-ip', request.ip, 30, 600),
 		]);
+
 		const policy = await this.policies.resolve();
+
 		await this.enforceCaptcha(
-			policy.captchaMode === 'adaptive' && (accountLimit.remaining <= 1 || ipLimit.remaining <= 26),
+			policy.captchaMode === 'adaptive' && (accountAttempts >= 4 || ipLimit.remaining <= 26),
 			input.captchaToken,
 			request,
 		);
@@ -224,6 +228,8 @@ export class AuthService {
 		const hash = result?.credential.passwordHash ?? (await this.dummyHash);
 		const valid = await verifyPassword(hash, input.password);
 		if (!result || !valid || result.user.status !== 'active') {
+			await this.rateLimiter.consume('login-account-ip', accountIdentity, 10, 600);
+
 			await this.audit.write({
 				type: 'login.failed',
 				success: false,
@@ -231,6 +237,7 @@ export class AuthService {
 				reasonCode: 'INVALID_CREDENTIALS',
 				request,
 			});
+
 			throw new AppError(401, 'INVALID_CREDENTIALS', INVALID_CREDENTIALS);
 		}
 
