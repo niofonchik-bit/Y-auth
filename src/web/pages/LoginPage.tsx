@@ -1,4 +1,4 @@
-import ShieldOutlined from '@mui/icons-material/ShieldOutlined';
+import BrandLogo, { BrandSymbol } from '../components/BrandLogo';
 import AppearanceControls from '../components/AppearanceControls';
 import { Alert, Button, Checkbox, FormControlLabel, Stack, TextField, Typography } from '@mui/material';
 import { useEffect, useState } from 'react';
@@ -63,9 +63,7 @@ export default function LoginPage() {
 			<section className="auth-frame surface">
 				<div className="auth-panel">
 					<Stack component="form" onSubmit={submit} spacing={2.25} sx={{ maxWidth: 370, mx: 'auto' }}>
-						<div className="brand-logo">
-							<span className="brand-mark">Y</span> Y.auth
-						</div>
+						<BrandLogo />
 						<div>
 							<Typography variant="h4" component="h1">
 								{t('auth.signIn')}
@@ -96,13 +94,11 @@ export default function LoginPage() {
 					</Stack>
 				</div>
 				<div className="auth-brand">
-					<div className="brand-logo">
-						<span className="brand-mark">Y</span> Y.AUTH
-					</div>
+					<BrandLogo />
 					<div>
 						<div className="identity-art" aria-hidden="true">
 							<div className="identity-core">
-								<ShieldOutlined />
+								<BrandSymbol />
 							</div>
 						</div>
 						<Typography variant="h3" sx={{ fontWeight: 600 }}>
@@ -110,7 +106,6 @@ export default function LoginPage() {
 						</Typography>
 						<Typography sx={{ mt: 2 }}>One secure account for every connected application.</Typography>
 					</div>
-					<Typography variant="caption">{t('auth.secured')}</Typography>
 				</div>
 			</section>
 		</main>

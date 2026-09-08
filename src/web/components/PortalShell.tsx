@@ -1,3 +1,4 @@
+import BrandLogo from './BrandLogo';
 import AppsOutlined from '@mui/icons-material/AppsOutlined';
 import ArrowOutward from '@mui/icons-material/ArrowOutward';
 import ChevronRight from '@mui/icons-material/ChevronRight';
@@ -78,9 +79,7 @@ export default function PortalShell({ mode }: { mode: 'account' | 'admin' }) {
 		<div className="portal">
 			<aside className="sidebar">
 				<div className="sidebar-brand">
-					<div className="brand-logo">
-						<span className="brand-mark">Y</span> Y.auth
-					</div>
+					<BrandLogo />
 				</div>
 				<div className="sidebar-caption">{t(mode === 'admin' ? 'admin.title' : 'account.title')}</div>
 				<nav className="sidebar-nav" aria-label={t(mode === 'admin' ? 'admin.title' : 'account.title')}>

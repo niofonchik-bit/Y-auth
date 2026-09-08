@@ -45,12 +45,89 @@
 .MuiIconButton-root:not(.Mui-disabled):active {
 	transform: scale(0.92);
 }
-@media (hover: hover) {
+/* Hover follows the whole control: surface, outline, light and movement. */
+.MuiButton-root::before {
+	content: '';
+	position: absolute;
+	inset: 0;
+	pointer-events: none;
+	background: linear-gradient(110deg, transparent 20%, rgb(255 255 255 / 15%) 50%, transparent 80%);
+	transform: translateX(-140%);
+	opacity: 0;
+	transition:
+		transform 540ms var(--ease-standard),
+		opacity 180ms;
+}
+.sidebar-link::before {
+	transition:
+		opacity 180ms,
+		transform 240ms var(--ease-standard);
+}
+.sidebar-link > span {
+	transition: transform 220ms var(--ease-standard);
+}
+.brand-symbol {
+	transition:
+		transform 400ms var(--ease-standard),
+		filter 400ms;
+}
+.brand-logo .brand-symbol {
+	animation: logo-enter 600ms var(--ease-standard) both;
+}
+.identity-core {
+	transition:
+		transform 400ms var(--ease-standard),
+		box-shadow 400ms,
+		border-color 400ms;
+}
+.MuiIconButton-root:focus-visible,
+.sidebar-link:focus-visible,
+.quick-link:focus-visible {
+	background-color: var(--accent-subtle);
+	box-shadow: 0 0 0 3px var(--accent-subtle);
+}
+@media (hover: hover) and (pointer: fine) {
 	.MuiButton-root:not(.Mui-disabled):hover {
-		transform: translateY(-1px);
+		transform: translateY(-2px);
+	}
+	.MuiButton-contained:not(.Mui-disabled):hover {
+		box-shadow:
+			0 6px 18px rgb(0 0 0 / 18%),
+			inset 0 1px 0 rgb(255 255 255 / 16%);
+	}
+	.MuiButton-root:not(.Mui-disabled):hover::before {
+		opacity: 1;
+		transform: translateX(140%);
+	}
+	.MuiButton-outlined:not(.Mui-disabled):hover {
+		border-color: currentColor;
+		background-color: color-mix(in srgb, currentColor 7%, transparent);
+		box-shadow: 0 0 0 3px color-mix(in srgb, currentColor 7%, transparent);
+	}
+	.MuiButton-text:not(.Mui-disabled):hover {
+		background-color: color-mix(in srgb, currentColor 9%, transparent);
+	}
+	.MuiIconButton-root:not(.Mui-disabled):hover {
+		transform: translateY(-2px);
+		color: var(--accent-primary);
+		background-color: var(--accent-subtle);
+		box-shadow: 0 0 0 3px var(--accent-subtle);
+	}
+	.sidebar-link:hover {
+		background: linear-gradient(100deg, var(--accent-subtle), var(--bg-surface-hover));
+		border-color: var(--accent-border);
+		color: var(--accent-primary);
+		box-shadow: 0 3px 10px rgb(0 0 0 / 4%);
+	}
+	.sidebar-link:hover::before {
+		opacity: 1;
+		transform: scaleY(1);
+	}
+	.sidebar-link:hover > span {
+		transform: translateX(3px);
 	}
 	.sidebar-link:hover > svg {
-		transform: translateX(2px);
+		transform: translateX(2px) scale(1.07);
 	}
 	.metric-card:hover {
 		border-color: var(--accent-border);
@@ -58,6 +135,7 @@
 	}
 	.quick-link:hover {
 		color: var(--accent-primary);
+		background: var(--accent-subtle);
 	}
 	.quick-link:hover > svg:last-child {
 		transform: translateX(4px);
@@ -65,7 +143,39 @@
 	.session-row:hover {
 		background: var(--bg-surface-hover);
 	}
+	.brand-logo:hover .brand-symbol {
+		transform: translateY(-2px) scale(1.06);
+		filter: drop-shadow(0 3px 7px rgb(67 236 170 / 18%));
+	}
+	.identity-art:hover .identity-core {
+		transform: translateY(-4px);
+		border-color: #7dc4a7;
+		box-shadow: 0 12px 32px rgb(67 236 170 / 10%);
+	}
 }
+@keyframes logo-enter {
+	from {
+		opacity: 0;
+		translate: 0 3px;
+	}
+	to {
+		opacity: 1;
+		translate: 0 0;
+	}
+}
+
+.MuiButton-root:not(.Mui-disabled):active {
+	transform: translateY(0) scale(0.98);
+	box-shadow: none;
+}
+.MuiIconButton-root:not(.Mui-disabled):active {
+	transform: scale(0.93);
+}
+.sidebar-link:active,
+.quick-link:active {
+	transform: scale(0.985);
+}
+
 .sidebar-link > svg {
 	transition: transform 180ms var(--ease-standard);
 }

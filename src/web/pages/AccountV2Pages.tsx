@@ -88,7 +88,7 @@ export function ProfilePage() {
 					{account.avatarUrl ? (
 						<img src={account.avatarUrl} alt="" width={64} height={64} style={{ borderRadius: '50%', objectFit: 'cover' }} />
 					) : (
-						<div className="brand-mark">{(account.displayName ?? account.email)[0]?.toUpperCase()}</div>
+						<div className="profile-avatar">{(account.displayName ?? account.email)[0]?.toUpperCase()}</div>
 					)}
 					<Button component="label" variant="outlined">
 						Replace avatar
@@ -96,12 +96,17 @@ export function ProfilePage() {
 					</Button>
 				</Stack>
 				<TextField name="displayName" label="Display name" defaultValue={account.displayName ?? ''} />
-				<TextField label="Email" value={account.email} disabled helperText={account.emailVerified ? 'Verified' : 'Verification required'} />
+				<TextField
+					label="Email"
+					value={account.email}
+					slotProps={{ input: { readOnly: true } }}
+					helperText={account.emailVerified ? 'Verified' : 'Verification required'}
+				/>
 				<TextField name="locale" label="Locale" select defaultValue={account.locale} slotProps={{ select: { native: true } }}>
 					<option value="en">English</option>
 					<option value="ru">Русский</option>
 				</TextField>
-				<TextField label="User ID" value={account.id} disabled />
+				<TextField label="User ID" value={account.id} slotProps={{ input: { readOnly: true } }} />
 				<Typography variant="caption">Created {new Intl.DateTimeFormat(account.locale).format(new Date(account.createdAt))}</Typography>
 				{message && <Alert severity="success">{message}</Alert>}
 				<Button type="submit" variant="contained" disabled={pending}>
@@ -119,6 +124,7 @@ export function SecurityPage() {
 	const [codes, setCodes] = useState<string[]>();
 	const [passwordMessage, setPasswordMessage] = useState<{ severity: 'success' | 'error'; text: string }>();
 	const [passwordPending, setPasswordPending] = useState(false);
+	const [passwords, setPasswords] = useState({ currentPassword: '', newPassword: '', confirmation: '' });
 
 	const load = useCallback(
 		() =>
@@ -136,8 +142,8 @@ export function SecurityPage() {
 	async function changePassword(event: FormEvent<HTMLFormElement>) {
 		event.preventDefault();
 
-		const formElement = event.currentTarget;
-		const form = new FormData(formElement);
+		if (passwordPending || !csrf) return;
+		const form = new FormData(event.currentTarget);
 		const currentPassword = String(form.get('currentPassword') ?? '');
 		const newPassword = String(form.get('newPassword') ?? '');
 		const confirmation = String(form.get('confirmation') ?? '');
@@ -160,7 +166,8 @@ export function SecurityPage() {
 				}),
 			});
 
-			formElement.reset();
+			// A native form reset does not notify MUI that uncontrolled inputs are empty.
+			setPasswords({ currentPassword: '', newPassword: '', confirmation: '' });
 			setPasswordMessage({ severity: 'success', text: 'Password changed.' });
 		} catch (error) {
 			setPasswordMessage({
@@ -212,15 +219,42 @@ export function SecurityPage() {
 					<p>Changing your password signs out your other sessions.</p>
 
 					<Stack component="form" onSubmit={changePassword} spacing={2}>
-						<TextField name="currentPassword" type="password" label="Current password" autoComplete="current-password" required />
+						<TextField
+							name="currentPassword"
+							value={passwords.currentPassword}
+							onChange={(event) => setPasswords((value) => ({ ...value, currentPassword: event.target.value }))}
+							disabled={passwordPending}
+							type="password"
+							label="Current password"
+							autoComplete="current-password"
+							required
+						/>
 
-						<TextField name="newPassword" type="password" label="New password" autoComplete="new-password" required />
+						<TextField
+							name="newPassword"
+							value={passwords.newPassword}
+							onChange={(event) => setPasswords((value) => ({ ...value, newPassword: event.target.value }))}
+							disabled={passwordPending}
+							type="password"
+							label="New password"
+							autoComplete="new-password"
+							required
+						/>
 
-						<TextField name="confirmation" type="password" label="Confirm new password" autoComplete="new-password" required />
+						<TextField
+							name="confirmation"
+							value={passwords.confirmation}
+							onChange={(event) => setPasswords((value) => ({ ...value, confirmation: event.target.value }))}
+							disabled={passwordPending}
+							type="password"
+							label="Confirm new password"
+							autoComplete="new-password"
+							required
+						/>
 
 						{passwordMessage && <Alert severity={passwordMessage.severity}>{passwordMessage.text}</Alert>}
 
-						<Button type="submit" variant="contained" disabled={passwordPending}>
+						<Button type="submit" variant="contained" disabled={passwordPending || !csrf}>
 							{passwordPending ? 'Changing…' : 'Change password'}
 						</Button>
 					</Stack>
@@ -230,7 +264,7 @@ export function SecurityPage() {
 					<h2>Two-factor authentication</h2>
 					<p>{data?.mfa.enabled ? `Enabled · ${data.mfa.recoveryCodesRemaining} recovery codes remain` : 'Not enabled'}</p>
 					{!data?.mfa.enabled && !setup && (
-						<Stack component="form" onSubmit={begin} direction="row" spacing={1}>
+						<Stack component="form" onSubmit={begin} direction={{ xs: 'column', sm: 'row' }} spacing={1}>
 							<TextField name="password" type="password" label="Current password" required />
 							<Button type="submit">Set up</Button>
 						</Stack>
@@ -239,7 +273,7 @@ export function SecurityPage() {
 						<Stack spacing={2}>
 							<img src={setup.qrDataUrl} alt="Authenticator QR code" width={220} />
 							<TextField value={setup.manualSecret} label="Manual secret" slotProps={{ htmlInput: { readOnly: true } }} />
-							<Stack component="form" onSubmit={enable} direction="row" spacing={1}>
+							<Stack component="form" onSubmit={enable} direction={{ xs: 'column', sm: 'row' }} spacing={1}>
 								<TextField name="code" label="6-digit code" required />
 								<Button type="submit" variant="contained">
 									Enable

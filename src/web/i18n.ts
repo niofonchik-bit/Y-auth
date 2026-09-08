@@ -24,7 +24,6 @@ const resources = {
 				forgot: 'Forgot password?',
 				google: 'Continue with Google',
 				mfa: 'Authenticator or recovery code',
-				secured: 'Secured by Y.auth',
 			},
 			account: { title: 'Account', profile: 'Profile', security: 'Security', sessions: 'Sessions', danger: 'Danger zone' },
 			admin: {
@@ -65,7 +64,6 @@ const resources = {
 				forgot: 'Забыли пароль?',
 				google: 'Продолжить с Google',
 				mfa: 'Код приложения или восстановления',
-				secured: 'Защищено Y.auth',
 			},
 			account: { title: 'Аккаунт', profile: 'Профиль', security: 'Безопасность', sessions: 'Сессии', danger: 'Опасная зона' },
 			admin: {

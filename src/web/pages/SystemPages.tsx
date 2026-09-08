@@ -1,3 +1,4 @@
+import BrandLogo from '../components/BrandLogo';
 import AppearanceControls from '../components/AppearanceControls';
 import { Alert, Button, Stack, TextField, Typography } from '@mui/material';
 import { type FormEvent, useEffect, useState } from 'react';
@@ -87,9 +88,7 @@ export function RegisterPage() {
 			</div>
 			<section className="auth-frame surface">
 				<div className="auth-brand">
-					<div className="brand-logo">
-						<span className="brand-mark">Y</span> Y.AUTH
-					</div>
+					<BrandLogo />
 					<Typography variant="h3">
 						One identity.
 						<br />

@@ -8,7 +8,7 @@ export function createPortalTheme(mode: 'light' | 'dark') {
 			mode,
 			primary: { main: dark ? '#6bc6ab' : '#22785f', contrastText: dark ? '#10251e' : '#ffffff' },
 			success: { main: dark ? '#6bc6ab' : '#22785f' },
-			error: { main: dark ? '#f28b92' : '#bb414b' },
+			error: { main: dark ? '#ff453a' : '#c62828', light: '#ff6259', dark: '#b91c1c', contrastText: '#ffffff' },
 			warning: { main: dark ? '#e8bc73' : '#98651f' },
 			info: { main: dark ? '#8fbbea' : '#396b9e' },
 			background: { default: dark ? '#101214' : '#f5f6f8', paper: dark ? '#181b1e' : '#ffffff' },
@@ -34,22 +34,56 @@ export function createPortalTheme(mode: 'light' | 'dark') {
 				styleOverrides: { root: { backgroundImage: 'none', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-md)' } },
 			},
 			MuiTextField: { defaultProps: { size: 'small', variant: 'outlined' } },
+			// The label and the input share one height token, including the larger auth fields.
+			MuiInputLabel: {
+				styleOverrides: {
+					root: {
+						'&.MuiInputLabel-outlined': {
+							fontSize: 14,
+							lineHeight: '20px',
+							transform: 'translate(14px, calc((var(--field-height, 44px) - 20px) / 2)) scale(1)',
+							'&.MuiInputLabel-shrink': { transform: 'translate(14px, -9px) scale(0.75)' },
+						},
+					},
+				},
+			},
 			MuiOutlinedInput: {
 				styleOverrides: {
 					root: {
-						minHeight: 42,
+						minHeight: 'var(--field-height, 44px)',
+						fontSize: 14,
 						backgroundColor: 'var(--bg-surface)',
 						transition: 'box-shadow 180ms, border-color 180ms',
 						'& fieldset': { borderColor: 'var(--border-default)' },
 						'&:hover fieldset': { borderColor: 'var(--text-disabled)' },
 						'&.Mui-focused': { boxShadow: '0 0 0 3px var(--accent-subtle)' },
+						'&.Mui-error.Mui-focused': { boxShadow: '0 0 0 3px var(--error-subtle)' },
+						'&.MuiInputBase-multiline': { padding: '12px 14px' },
+					},
+					input: {
+						height: '20px',
+						lineHeight: '20px',
+						padding: 'calc((var(--field-height, 44px) - 20px) / 2) 14px',
+						'&.MuiInputBase-inputMultiline': { height: 'auto', padding: 0 },
 					},
 				},
 			},
 			MuiButton: {
 				defaultProps: { disableElevation: true },
 				styleOverrides: {
-					root: { minHeight: 38, paddingInline: 16, borderRadius: 'var(--radius-sm)' },
+					root: {
+						minHeight: 38,
+						paddingInline: 16,
+						borderRadius: 'var(--radius-sm)',
+						position: 'relative',
+						overflow: 'hidden',
+						'&.Mui-focusVisible': { outline: '2px solid currentColor', outlineOffset: 3 },
+						// White text needs a deeper red fill than error text on a dark surface.
+						'&.MuiButton-contained.MuiButton-colorError': {
+							'--variant-containedBg': '#c62828',
+							'@media (hover: hover)': { '&:hover': { '--variant-containedBg': '#a91f1f' } },
+						},
+					},
 					outlined: { borderColor: 'var(--border-default)' },
 					sizeSmall: { minHeight: 32, paddingInline: 10 },
 				},
@@ -61,7 +95,22 @@ export function createPortalTheme(mode: 'light' | 'dark') {
 			MuiDialogTitle: { styleOverrides: { root: { padding: '24px 24px 16px', fontSize: 19, fontWeight: 600 } } },
 			MuiDialogActions: { styleOverrides: { root: { padding: '16px 24px', borderTop: '1px solid var(--border-subtle)', gap: 8 } } },
 			MuiBackdrop: { styleOverrides: { root: { backgroundColor: 'var(--overlay-backdrop)', backdropFilter: 'blur(4px)' } } },
-			MuiAlert: { styleOverrides: { root: { borderRadius: 10, alignItems: 'center' } } },
+			MuiAlert: {
+				styleOverrides: {
+					root: ({ ownerState }) => ({
+						borderRadius: 10,
+						alignItems: 'center',
+						...(ownerState.severity === 'error' && ownerState.variant !== 'filled'
+							? {
+									color: 'var(--status-error)',
+									backgroundColor: 'var(--error-subtle)',
+									border: '1px solid var(--error-border)',
+									'& .MuiAlert-icon': { color: 'inherit' },
+								}
+							: {}),
+					}),
+				},
+			},
 			MuiMenu: { styleOverrides: { paper: { marginTop: 4, boxShadow: 'var(--shadow-card)' } } },
 			MuiMenuItem: { styleOverrides: { root: { margin: '2px 6px', borderRadius: 6, minHeight: 36 } } },
 			MuiTooltip: { defaultProps: { arrow: true } },

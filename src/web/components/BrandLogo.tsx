@@ -1,0 +1,29 @@
+export function BrandSymbol() {
+	return (
+		<svg className="brand-symbol" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none" aria-hidden="true" focusable="false">
+			<path
+				className="logo-structure"
+				d="M8 11.5 20.5 19 28 23.5v6L18 23.5 8 17.5v-6Zm0 11 10 6 5 3v5l-5 5v10l6 4v5.5l-11-7V39l5-5-10-6v-5.5Z"
+			/>
+			<path className="logo-structure" d="M56 11.5 43.5 19 36 23.5v6l10-6 10-6v-6Zm0 11-10 6-5 3v5l5 5v10l-6 4v5.5l11-7V39l-5-5 10-6v-5.5Z" />
+
+			<path className="logo-accent" d="M8 6.5 13 9.5v4.5l-5-3V6.5Zm48 0-5 3v4.5l5-3V6.5Z" />
+
+			<path
+				className="logo-accent"
+				fillRule="evenodd"
+				clipRule="evenodd"
+				d="M29 7h6v22.5l5 5V52l-8 5-8-5V34.5l5-5V7Zm3 31.5a2.5 2.5 0 1 1 0 5 2.5 2.5 0 0 1 0-5Zm-1.3 4.2h2.6l2.1 6.3h-6.8l2.1-6.3Z"
+			/>
+		</svg>
+	);
+}
+
+export default function BrandLogo() {
+	return (
+		<div className="brand-logo">
+			<BrandSymbol />
+			<span>Y.auth</span>
+		</div>
+	);
+}

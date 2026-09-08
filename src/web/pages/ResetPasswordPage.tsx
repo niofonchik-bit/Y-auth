@@ -5,7 +5,8 @@ import { api, csrfToken } from '../api';
 import AsyncButton from '../components/AsyncButton';
 
 export default function ResetPasswordPage() {
-	const token = new URLSearchParams(window.location.search).get('token');
+	const [token] = useState(() => new URLSearchParams(window.location.search).get('token'));
+	const [completed, setCompleted] = useState(false);
 	const [csrf, setCsrf] = useState('');
 	const [loading, setLoading] = useState(false);
 	const [message, setMessage] = useState<{
@@ -26,6 +27,7 @@ export default function ResetPasswordPage() {
 
 	const submit = async (event: FormEvent<HTMLFormElement>) => {
 		event.preventDefault();
+		if (loading || !csrf || completed) return;
 		const form = new FormData(event.currentTarget);
 		setLoading(true);
 		setMessage(null);
@@ -40,6 +42,7 @@ export default function ResetPasswordPage() {
 					}),
 				});
 				window.history.replaceState({}, '', '/reset-password');
+				setCompleted(true);
 				setMessage({
 					type: 'success',
 					text: 'Password changed. Sign in again from your application.',
@@ -67,22 +70,30 @@ export default function ResetPasswordPage() {
 	return (
 		<AuthCard>
 			<Typography variant="h4" component="h1" gutterBottom>
-				{token ? 'Choose a new password' : 'Reset password'}
+				{completed ? 'Password changed' : token ? 'Choose a new password' : 'Reset password'}
 			</Typography>
 			<Typography color="text.secondary" sx={{ mb: 3 }}>
-				{token ? 'Set a new password for your account.' : 'Enter your email to receive reset instructions.'}
+				{completed
+					? 'You can now sign in with your new password.'
+					: token
+						? 'Set a new password for your account.'
+						: 'Enter your email to receive reset instructions.'}
 			</Typography>
-			<Stack component="form" spacing={2.5} onSubmit={submit}>
-				{token ? (
-					<TextField name="password" type="password" label="New password" required slotProps={{ htmlInput: { maxLength: 256 } }} />
-				) : (
-					<TextField name="email" type="email" label="Email" required />
-				)}
-				{message && <Alert severity={message.type}>{message.text}</Alert>}
-				<AsyncButton type="submit" variant="contained" loading={loading} disabled={!csrf}>
-					{token ? 'Change password' : 'Send reset instructions'}
-				</AsyncButton>
-			</Stack>
+			{completed ? (
+				message && <Alert severity={message.type}>{message.text}</Alert>
+			) : (
+				<Stack component="form" spacing={2.5} onSubmit={submit}>
+					{token ? (
+						<TextField name="password" type="password" label="New password" required slotProps={{ htmlInput: { maxLength: 256 } }} />
+					) : (
+						<TextField name="email" type="email" label="Email" required />
+					)}
+					{message && <Alert severity={message.type}>{message.text}</Alert>}
+					<AsyncButton type="submit" variant="contained" loading={loading} disabled={!csrf}>
+						{token ? 'Change password' : 'Send reset instructions'}
+					</AsyncButton>
+				</Stack>
+			)}
 			<Button href="/login" sx={{ mt: 2 }}>
 				Back to sign in
 			</Button>

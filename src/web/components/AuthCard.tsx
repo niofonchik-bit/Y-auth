@@ -1,3 +1,4 @@
+import BrandLogo from './BrandLogo';
 import type { ReactNode } from 'react';
 import AppearanceControls from './AppearanceControls';
 
@@ -8,9 +9,7 @@ export default function AuthCard({ children }: { children: ReactNode }) {
 				<AppearanceControls />
 			</div>
 			<section className="auth-single surface">
-				<div className="brand-logo">
-					<span className="brand-mark">Y</span> Y.auth
-				</div>
+				<BrandLogo />
 				{children}
 			</section>
 		</main>

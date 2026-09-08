@@ -359,7 +359,7 @@ pre {
 	font-weight: 600;
 	letter-spacing: -0.045em;
 }
-.brand-mark {
+.profile-avatar {
 	width: 34px;
 	height: 34px;
 	flex-shrink: 0;
@@ -548,8 +548,8 @@ pre {
 .auth-panel .MuiButton-contained {
 	min-height: 44px;
 }
-.auth-panel .MuiOutlinedInput-root {
-	min-height: 46px;
+.auth-panel {
+	--field-height: 48px;
 }
 .auth-brand {
 	position: relative;
@@ -571,11 +571,7 @@ pre {
 	background:
 		radial-gradient(ellipse at 90% 0%, rgb(114 176 150 / 22%), transparent 65%), linear-gradient(145deg, transparent 45%, rgb(0 0 0 / 20%));
 }
-.auth-brand .brand-mark {
-	color: #b5d8c9;
-	background: rgb(181 216 201 / 7%);
-	border-color: rgb(181 216 201 / 25%);
-}
+
 .auth-brand .MuiTypography-h3 {
 	font-size: clamp(32px, 3.4vw, 44px);
 	max-width: 360px;
@@ -806,13 +802,6 @@ pre {
 	.portal-main form.MuiStack-root {
 		min-width: 0;
 	}
-	.portal-main .section form.MuiStack-root {
-		flex-wrap: wrap;
-		gap: 12px;
-	}
-	.portal-main .section form.MuiStack-root > .MuiButton-root {
-		margin-left: 0;
-	}
 }
 .topbar-actions {
 	display: flex;
@@ -842,4 +831,105 @@ pre {
 }
 .legacy-admin .MuiTab-root {
 	min-width: 100px;
+}
+
+/* UI chrome is not document content. Values, messages and recovery data stay selectable. */
+.brand-logo,
+.brand-symbol,
+.sidebar-link,
+.sidebar-caption,
+.breadcrumbs,
+.page-title,
+.section h2,
+.MuiDialogTitle-root,
+.MuiInputLabel-root,
+.MuiFormControlLabel-root,
+.data-table th,
+.environment-badge,
+.MuiButtonBase-root,
+.quick-link,
+.account-avatar,
+.profile-avatar {
+	-webkit-user-select: none;
+	user-select: none;
+}
+input,
+textarea,
+pre,
+code,
+.MuiAlert-message,
+.detail-row dd,
+.data-table td {
+	-webkit-user-select: text;
+	user-select: text;
+}
+.brand-symbol {
+	display: block;
+	width: 42px;
+	height: 42px;
+	flex-shrink: 0;
+	overflow: visible;
+}
+.logo-structure {
+	fill: #1f2937;
+}
+.logo-accent {
+	fill: #43ecaa;
+}
+:root[data-theme='dark'] .logo-structure,
+.auth-brand .logo-structure {
+	fill: #b8c9c3;
+}
+.identity-core .brand-symbol {
+	width: 54px;
+	height: 54px;
+}
+.brand-logo {
+	cursor: default;
+}
+.profile-avatar {
+	width: 64px;
+	height: 64px;
+	border-radius: 50%;
+	font-size: 24px;
+}
+.status--error {
+	background: var(--error-subtle);
+	border-color: var(--error-border);
+}
+.sidebar-link {
+	overflow: hidden;
+	isolation: isolate;
+}
+.sidebar-link::before {
+	content: '';
+	position: absolute;
+	inset: 9px auto 9px 0;
+	width: 3px;
+	border-radius: 0 4px 4px 0;
+	background: var(--accent-primary);
+	opacity: 0;
+	transform: scaleY(0.3);
+	pointer-events: none;
+}
+.sidebar-link.active::before {
+	opacity: 1;
+	transform: scaleY(1);
+}
+.quick-link {
+	padding-inline: 12px;
+	margin-inline: -12px;
+	border-radius: 8px;
+}
+.auth-panel .MuiFormControlLabel-root {
+	flex-shrink: 1;
+	min-width: 0;
+}
+.auth-panel .MuiFormControlLabel-label {
+	line-height: 1.4;
+}
+@media (max-width: 600px) {
+	.auth-panel {
+		--field-height: 46px;
+	}
 }

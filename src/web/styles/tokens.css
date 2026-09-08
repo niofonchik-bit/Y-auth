@@ -14,7 +14,9 @@
 	--accent-subtle: rgb(107 198 171 / 10%);
 	--accent-border: rgb(107 198 171 / 28%);
 	--status-success: #6bc6ab;
-	--status-error: #f28b92;
+	--status-error: #ff453a;
+	--error-subtle: rgb(255 69 58 / 10%);
+	--error-border: rgb(255 69 58 / 30%);
 	--status-warning: #e8bc73;
 	--status-info: #8fbbea;
 	--focus-ring: rgb(107 198 171 / 45%);
@@ -39,7 +41,9 @@
 	--accent-subtle: rgb(34 120 95 / 8%);
 	--accent-border: rgb(34 120 95 / 22%);
 	--status-success: #22785f;
-	--status-error: #bb414b;
+	--status-error: #c62828;
+	--error-subtle: rgb(198 40 40 / 7%);
+	--error-border: rgb(198 40 40 / 24%);
 	--status-warning: #98651f;
 	--status-info: #396b9e;
 	--focus-ring: rgb(34 120 95 / 35%);
@@ -49,6 +53,7 @@
 }
 
 :root {
+	--field-height: 44px;
 	--radius-xs: 5px;
 	--radius-sm: 8px;
 	--radius-md: 12px;
