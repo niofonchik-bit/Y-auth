@@ -1,7 +1,7 @@
 import AsyncButton from '../components/AsyncButton';
 import LoadingPreview from '../components/LoadingPreview';
 import PasswordField from '../components/PasswordField';
-import { Alert, Button, Divider, Stack, TextField, Typography } from '@mui/material';
+import { Alert, MenuItem, Button, Divider, Stack, TextField, Typography } from '@mui/material';
 import { type FormEvent, useCallback, useEffect, useState } from 'react';
 import { api, csrfToken } from '../api';
 
@@ -108,9 +108,9 @@ export function ProfilePage() {
 					slotProps={{ input: { readOnly: true } }}
 					helperText={account.emailVerified ? 'Verified' : 'Verification required'}
 				/>
-				<TextField name="locale" label="Locale" select defaultValue={account.locale} slotProps={{ select: { native: true } }}>
-					<option value="en">English</option>
-					<option value="ru">Русский</option>
+				<TextField name="locale" label="Locale" select defaultValue={account.locale}>
+					<MenuItem value="en">English</MenuItem>
+					<MenuItem value="ru">Русский</MenuItem>
 				</TextField>
 				<TextField label="User ID" value={account.id} slotProps={{ input: { readOnly: true } }} />
 				<Typography variant="caption">Created {new Intl.DateTimeFormat(account.locale).format(new Date(account.createdAt))}</Typography>
@@ -430,7 +430,7 @@ export function DangerPage() {
 		<section className="page">
 			<Header title="Danger zone" subtitle="Export, deactivate or schedule deletion of your account." />
 			<Stack className="surface section" spacing={3} sx={{ maxWidth: 760 }}>
-				<Stack component="form" onSubmit={exportData} spacing={1}>
+				<Stack component="form" onSubmit={exportData} spacing={2}>
 					<h2>Export account data</h2>
 					<PasswordField name="password" label="Current password" required />
 					<Button type="submit" variant="outlined">
@@ -438,7 +438,7 @@ export function DangerPage() {
 					</Button>
 				</Stack>
 				<Divider />
-				<Stack component="form" onSubmit={(event) => action(event, 'deactivate')} spacing={1}>
+				<Stack component="form" onSubmit={(event) => action(event, 'deactivate')} spacing={2}>
 					<h2>Deactivate account</h2>
 					<PasswordField name="password" label="Current password" required />
 					<Button type="submit" color="error">
@@ -446,7 +446,7 @@ export function DangerPage() {
 					</Button>
 				</Stack>
 				<Divider />
-				<Stack component="form" onSubmit={(event) => action(event, 'delete')} spacing={1}>
+				<Stack component="form" onSubmit={(event) => action(event, 'delete')} spacing={2}>
 					<h2>Delete account</h2>
 					<p>Deletion is scheduled after a 30-day grace period.</p>
 					<PasswordField name="password" label="Current password" required />

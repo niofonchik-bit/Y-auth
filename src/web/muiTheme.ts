@@ -42,6 +42,8 @@ export function createPortalTheme(mode: 'light' | 'dark') {
 					indeterminateIcon: createElement(AnimatedCheck, { indeterminate: true }),
 				},
 			},
+			// Use layout gaps so field margins cannot collapse the space between controls.
+			MuiStack: { defaultProps: { useFlexGap: true } },
 			MuiTextField: { defaultProps: { size: 'small', variant: 'outlined' } },
 			// The label and the input share one height token, including the larger auth fields.
 			MuiInputLabel: {
@@ -62,6 +64,9 @@ export function createPortalTheme(mode: 'light' | 'dark') {
 						minHeight: 'var(--field-height, 44px)',
 						fontSize: 14,
 						backgroundColor: 'var(--bg-surface)',
+						'--field-autofill': 'color-mix(in srgb, var(--accent-primary) 8%, var(--bg-surface))',
+						'&:has(input:-webkit-autofill)': { backgroundColor: 'var(--field-autofill)', transition: 'none' },
+						'&:has(input:autofill)': { backgroundColor: 'var(--field-autofill)', transition: 'none' },
 						transition: 'background-color 220ms',
 						outline: 'none',
 						'& fieldset': { borderColor: 'var(--border-default)', transition: 'border-color 240ms, box-shadow 240ms' },
@@ -75,13 +80,13 @@ export function createPortalTheme(mode: 'light' | 'dark') {
 						lineHeight: '20px',
 						padding: 'calc((var(--field-height, 44px) - 20px) / 2) 14px',
 						'&:-webkit-autofill': {
-							WebkitBoxShadow: '0 0 0 1000px color-mix(in srgb, var(--accent-primary) 8%, var(--bg-surface)) inset',
+							WebkitBoxShadow: '0 0 0 1000px var(--field-autofill) inset',
 							WebkitTextFillColor: 'var(--text-primary)',
 							caretColor: 'var(--text-primary)',
 							borderRadius: 'inherit',
 						},
 						'&:autofill': {
-							boxShadow: '0 0 0 1000px color-mix(in srgb, var(--accent-primary) 8%, var(--bg-surface)) inset',
+							boxShadow: '0 0 0 1000px var(--field-autofill) inset',
 							caretColor: 'var(--text-primary)',
 						},
 						'&.MuiInputBase-inputMultiline': { height: 'auto', padding: 0 },
@@ -89,7 +94,7 @@ export function createPortalTheme(mode: 'light' | 'dark') {
 				},
 			},
 			MuiButton: {
-				defaultProps: { disableElevation: true },
+				defaultProps: { disableElevation: true, disableRipple: true },
 				styleOverrides: {
 					root: {
 						minHeight: 38,
@@ -131,8 +136,57 @@ export function createPortalTheme(mode: 'light' | 'dark') {
 					}),
 				},
 			},
-			MuiMenu: { styleOverrides: { paper: { marginTop: 4, boxShadow: 'var(--shadow-card)' } } },
-			MuiMenuItem: { styleOverrides: { root: { margin: '2px 6px', borderRadius: 6, minHeight: 36 } } },
+			MuiSelect: {
+				styleOverrides: {
+					icon: { transition: 'transform 280ms var(--ease-standard), color 280ms', color: 'var(--text-secondary)' },
+					select: { '&:focus': { backgroundColor: 'transparent' } },
+				},
+			},
+			MuiMenu: {
+				defaultProps: {
+					transitionDuration: { enter: 240, exit: 180 },
+					slotProps: { transition: { easing: { enter: 'cubic-bezier(0.2, 0.8, 0.2, 1)', exit: 'ease-in-out' } } },
+				},
+				styleOverrides: {
+					paper: {
+						marginTop: 6,
+						padding: 4,
+						borderRadius: 12,
+						backgroundColor: 'var(--bg-surface)',
+						border: '1px solid var(--border-default)',
+						boxShadow: '0 8px 28px rgb(0 0 0 / 14%)',
+						maxHeight: 'min(360px, calc(100dvh - 48px))',
+						overscrollBehavior: 'contain',
+					},
+					list: { padding: 0 },
+				},
+			},
+			MuiMenuItem: {
+				defaultProps: { disableRipple: true },
+				styleOverrides: {
+					root: {
+						margin: '2px 0',
+						padding: '9px 12px',
+						borderRadius: 7,
+						minHeight: 38,
+						fontSize: 14,
+						whiteSpace: 'normal',
+						overflowWrap: 'anywhere',
+						transition: 'background-color 240ms var(--ease-standard), color 240ms, box-shadow 240ms',
+						'&:hover': { backgroundColor: 'var(--bg-surface-hover)' },
+						'&.Mui-selected': {
+							backgroundColor: 'var(--accent-subtle)',
+							color: 'var(--accent-primary)',
+							boxShadow: 'inset 2px 0 0 var(--accent-primary)',
+						},
+						'&.Mui-selected:hover, &.Mui-focusVisible': {
+							backgroundColor: 'var(--accent-subtle)',
+							boxShadow: 'inset 0 0 0 1px var(--accent-border)',
+						},
+						'&.Mui-selected.Mui-focusVisible': { boxShadow: 'inset 2px 0 0 var(--accent-primary), inset 0 0 0 1px var(--accent-border)' },
+					},
+				},
+			},
 			MuiTooltip: { defaultProps: { arrow: true } },
 		},
 	});

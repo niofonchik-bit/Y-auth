@@ -24,7 +24,6 @@
 .MuiAlert-root {
 	animation: page-enter 220ms var(--ease-standard);
 }
-.MuiButton-root,
 .MuiIconButton-root,
 .sidebar-link,
 .quick-link,
@@ -39,24 +38,8 @@
 		color var(--duration-hover),
 		box-shadow var(--duration-hover);
 }
-.MuiButton-root:not(.Mui-disabled):active {
-	transform: scale(0.98);
-}
 .MuiIconButton-root:not(.Mui-disabled):active {
 	transform: scale(0.92);
-}
-/* Hover follows the whole control: surface, outline, light and movement. */
-.MuiButton-root::before {
-	content: '';
-	position: absolute;
-	inset: 0;
-	pointer-events: none;
-	background: linear-gradient(110deg, transparent 20%, rgb(255 255 255 / 15%) 50%, transparent 80%);
-	transform: translateX(-140%);
-	opacity: 0;
-	transition:
-		transform 540ms var(--ease-standard),
-		opacity 180ms;
 }
 .sidebar-link::before {
 	transition:
@@ -87,26 +70,6 @@
 	box-shadow: 0 0 0 3px var(--accent-subtle);
 }
 @media (hover: hover) and (pointer: fine) {
-	.MuiButton-root:not(.Mui-disabled):hover {
-		transform: translateY(-2px);
-	}
-	.MuiButton-contained:not(.Mui-disabled):hover {
-		box-shadow:
-			0 6px 18px rgb(0 0 0 / 18%),
-			inset 0 1px 0 rgb(255 255 255 / 16%);
-	}
-	.MuiButton-root:not(.Mui-disabled):hover::before {
-		opacity: 1;
-		transform: translateX(140%);
-	}
-	.MuiButton-outlined:not(.Mui-disabled):hover {
-		border-color: currentColor;
-		background-color: color-mix(in srgb, currentColor 7%, transparent);
-		box-shadow: 0 0 0 3px color-mix(in srgb, currentColor 7%, transparent);
-	}
-	.MuiButton-text:not(.Mui-disabled):hover {
-		background-color: color-mix(in srgb, currentColor 9%, transparent);
-	}
 	.MuiIconButton-root:not(.Mui-disabled):hover {
 		transform: translateY(-2px);
 		color: var(--accent-primary);
@@ -164,10 +127,6 @@
 	}
 }
 
-.MuiButton-root:not(.Mui-disabled):active {
-	transform: translateY(0) scale(0.98);
-	box-shadow: none;
-}
 .MuiIconButton-root:not(.Mui-disabled):active {
 	transform: scale(0.93);
 }
