@@ -1,3 +1,5 @@
+import { Suspense } from 'react';
+import LoadingPreview from './LoadingPreview';
 import BrandLogo from './BrandLogo';
 import AppsOutlined from '@mui/icons-material/AppsOutlined';
 import ArrowOutward from '@mui/icons-material/ArrowOutward';
@@ -130,7 +132,9 @@ export default function PortalShell({ mode }: { mode: 'account' | 'admin' }) {
 				</header>
 				<main className="portal-main">
 					<div className="route-content" ref={contentRef}>
-						<Outlet />
+						<Suspense fallback={<LoadingPreview />}>
+							<Outlet />
+						</Suspense>
 					</div>
 				</main>
 			</div>

@@ -16,6 +16,14 @@ const resources = {
 			},
 			auth: {
 				signIn: 'Sign in',
+				noAccount: 'New here? Create an account',
+				hasAccount: 'Already have an account? Sign in',
+				displayName: 'Display name',
+				passwordHint: 'At least 15 characters',
+				showPassword: 'Show password',
+				hidePassword: 'Hide password',
+				brandTitle: 'One identity. Every application.',
+				brandSubtitle: 'Your applications, connected through one account.',
 				createAccount: 'Create account',
 				continueTo: 'to continue to {{client}}',
 				email: 'Email address',
@@ -56,6 +64,14 @@ const resources = {
 			},
 			auth: {
 				signIn: 'Войти',
+				noAccount: 'Нет аккаунта? Зарегистрироваться',
+				hasAccount: 'Уже есть аккаунт? Войти',
+				displayName: 'Имя',
+				passwordHint: 'Не менее 15 символов',
+				showPassword: 'Показать пароль',
+				hidePassword: 'Скрыть пароль',
+				brandTitle: 'Один аккаунт. Все приложения.',
+				brandSubtitle: 'Ваши приложения, объединённые одним аккаунтом.',
 				createAccount: 'Создать аккаунт',
 				continueTo: 'для продолжения в {{client}}',
 				email: 'Email',
@@ -88,9 +104,30 @@ const saved = localStorage.getItem('y-auth-locale');
 const language = saved === 'ru' || saved === 'en' ? saved : navigator.language.toLowerCase().startsWith('ru') ? 'ru' : 'en';
 await i18n.use(initReactI18next).init({ resources, lng: language, fallbackLng: 'en', interpolation: { escapeValue: false } });
 
+document.documentElement.lang = language;
+
 export async function changeLocale(locale: 'en' | 'ru') {
 	localStorage.setItem('y-auth-locale', locale);
 	await i18n.changeLanguage(locale);
+	document.documentElement.lang = locale;
+	if (!matchMedia('(prefers-reduced-motion: reduce)').matches) {
+		// Animate existing nodes; keep form state and input focus intact.
+		for (const element of document.querySelectorAll<HTMLElement>('.auth-form, .auth-brand-content, .sidebar-nav, .breadcrumbs')) {
+			element
+				.getAnimations()
+				.filter((animation) => animation.id === 'locale-change')
+				.forEach((animation) => {
+					animation.cancel();
+				});
+			element.animate(
+				[
+					{ opacity: 0.4, transform: 'translateY(3px)' },
+					{ opacity: 1, transform: 'translateY(0)' },
+				],
+				{ id: 'locale-change', duration: 240, easing: 'ease-out' },
+			);
+		}
+	}
 }
 
 export default i18n;

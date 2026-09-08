@@ -8,10 +8,11 @@ import PeopleOutlined from '@mui/icons-material/PeopleOutlined';
 import SearchOutlined from '@mui/icons-material/SearchOutlined';
 import ShieldOutlined from '@mui/icons-material/ShieldOutlined';
 import { Alert, Button, InputAdornment, MenuItem, Stack, TextField, Typography } from '@mui/material';
-import { useEffect, useState } from 'react';
+import { lazy, useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { api } from '../api';
-import LegacyAdminPage from './AdminPage';
+const LegacyAdminPage = lazy(() => import('./AdminPage'));
+import LoadingPreview from '../components/LoadingPreview';
 
 interface PageResult {
 	items: Array<Record<string, unknown>>;
@@ -208,13 +209,24 @@ export function AdminListPage({ kind }: { kind: keyof typeof config }) {
 	const [params, setParams] = useSearchParams();
 	const [data, setData] = useState<PageResult>();
 	const [error, setError] = useState('');
+	const [loading, setLoading] = useState(true);
 	const query = params.toString();
 	useEffect(() => {
 		const controller = new AbortController();
+		setLoading(true);
+		setError('');
 		api<PageResult>(`/api/v1/admin/${definition.endpoint}?${query}`, { signal: controller.signal })
-			.then(setData)
+			.then((value) => {
+				if (!controller.signal.aborted) {
+					setData(value);
+					setLoading(false);
+				}
+			})
 			.catch((cause: Error) => {
-				if (!controller.signal.aborted) setError(cause.message);
+				if (!controller.signal.aborted) {
+					setError(cause.message);
+					setLoading(false);
+				}
 			});
 		return () => controller.abort();
 	}, [definition.endpoint, query]);
@@ -271,46 +283,52 @@ export function AdminListPage({ kind }: { kind: keyof typeof config }) {
 				</TextField>
 			</div>
 			{error && <Alert severity="error">{error}</Alert>}
-			<div className={`surface table-surface${!data ? ' pending-edge' : ''}`}>
-				<table className="data-table">
-					<thead>
-						<tr>
-							{definition.columns.map((column) => (
-								<th key={column} scope="col">
-									{fieldLabel(column)}
-								</th>
-							))}
-						</tr>
-					</thead>
-					<tbody>
-						{data?.items.map((row, index) => (
-							<tr
-								key={String(row.id ?? index)}
-								onClick={() => navigate(`/admin/${kind}/${encodeURIComponent(String(row.clientId ?? row.id))}`)}
-								onKeyDown={(event) => {
-									if (event.key === 'Enter' && event.target === event.currentTarget)
-										navigate(`/admin/${kind}/${encodeURIComponent(String(row.clientId ?? row.id))}`);
-								}}
-								aria-label={`Open ${String(row.name ?? row.email ?? row.id ?? 'record')}`}
-								tabIndex={0}
-							>
+			<div className="surface table-surface" aria-busy={loading}>
+				{loading ? (
+					<LoadingPreview rows={5} />
+				) : (
+					<table className="data-table">
+						<thead>
+							<tr>
 								{definition.columns.map((column) => (
-									<td data-label={fieldLabel(column)} key={column}>
-										<FieldValue value={row[column]} />
-									</td>
+									<th key={column} scope="col">
+										{fieldLabel(column)}
+									</th>
 								))}
 							</tr>
-						))}
-					</tbody>
-				</table>
-				{data?.items.length === 0 && (
+						</thead>
+						<tbody>
+							{data?.items.map((row, index) => (
+								<tr
+									key={String(row.clientId ?? row.id ?? index)}
+									className="list-row-enter"
+									style={{ animationDelay: `${Math.min(index, 8) * 24}ms` }}
+									onClick={() => navigate(`/admin/${kind}/${encodeURIComponent(String(row.clientId ?? row.id))}`)}
+									onKeyDown={(event) => {
+										if (event.key === 'Enter' && event.target === event.currentTarget)
+											navigate(`/admin/${kind}/${encodeURIComponent(String(row.clientId ?? row.id))}`);
+									}}
+									aria-label={`Open ${String(row.name ?? row.email ?? row.id ?? 'record')}`}
+									tabIndex={0}
+								>
+									{definition.columns.map((column) => (
+										<td data-label={fieldLabel(column)} key={column}>
+											<FieldValue value={row[column]} />
+										</td>
+									))}
+								</tr>
+							))}
+						</tbody>
+					</table>
+				)}
+				{!loading && data?.items.length === 0 && (
 					<div className="empty-state">
 						<SearchOutlined />
 						No matching records.
 					</div>
 				)}
 			</div>
-			{data && (
+			{data && !loading && (
 				<Stack direction="row" sx={{ mt: 2, alignItems: 'center', justifyContent: 'space-between' }}>
 					<Typography variant="body2">
 						Page {data.page} of {data.totalPages} · {data.total} records
@@ -334,8 +352,20 @@ export function AdminDetailPage({ kind }: { kind: 'applications' | 'users' | 'se
 	const id = params.clientId ?? params.userId ?? params.sessionId ?? params.eventId;
 	const endpoint = kind === 'applications' ? 'clients' : kind;
 	const [value, setValue] = useState<Record<string, unknown>>();
+	const [error, setError] = useState('');
 	useEffect(() => {
-		if (id) api<Record<string, unknown>>(`/api/v1/admin/${endpoint}/${encodeURIComponent(id)}`).then(setValue);
+		const controller = new AbortController();
+		setValue(undefined);
+		setError('');
+		if (id)
+			api<Record<string, unknown>>(`/api/v1/admin/${endpoint}/${encodeURIComponent(id)}`, { signal: controller.signal })
+				.then((value) => {
+					if (!controller.signal.aborted) setValue(value);
+				})
+				.catch((error: Error) => {
+					if (!controller.signal.aborted) setError(error.message);
+				});
+		return () => controller.abort();
 	}, [endpoint, id]);
 	return (
 		<section className="page">
@@ -360,8 +390,10 @@ export function AdminDetailPage({ kind }: { kind: 'applications' | 'users' | 'se
 							</div>
 						))}
 					</dl>
+				) : error ? (
+					<Alert severity="error">{error}</Alert>
 				) : (
-					<div className="skeleton" style={{ height: 180 }} />
+					<LoadingPreview />
 				)}
 			</div>
 		</section>

@@ -1,0 +1,356 @@
+/* Shared interactions: no timers or DOM replacement for purely visual feedback. */
+.sr-only {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	padding: 0;
+	margin: -1px;
+	overflow: hidden;
+	clip-path: inset(50%);
+	white-space: nowrap;
+	border: 0;
+}
+.auth-switcher {
+	position: relative;
+}
+.auth-switcher .auth-panel {
+	grid-column: 1;
+	grid-row: 1;
+}
+.auth-switcher.is-register .auth-panel {
+	grid-column: 2;
+}
+.auth-switcher .auth-brand {
+	position: absolute;
+	inset: 0 0 0 auto;
+	width: 50%;
+	justify-content: center;
+	text-align: center;
+	z-index: 2;
+	transition: transform 650ms var(--ease-standard);
+}
+.auth-switcher.is-register .auth-brand {
+	transform: translateX(-100%);
+}
+.auth-brand-content {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+}
+.auth-switcher .identity-art {
+	margin: 0 auto 40px;
+	width: 180px;
+	height: 180px;
+}
+.auth-switcher .identity-core {
+	width: 112px;
+	height: 112px;
+	border-radius: 30px;
+}
+.auth-switcher .identity-core .brand-symbol {
+	width: 84px;
+	height: 84px;
+	animation: brand-reveal 850ms var(--ease-standard) both;
+}
+.auth-form {
+	width: 100%;
+	max-width: 390px;
+	margin-inline: auto;
+	animation: form-reveal 440ms var(--ease-standard) both;
+}
+.auth-switcher .auth-form {
+	padding: 0;
+}
+.auth-form h1 {
+	margin-bottom: 8px;
+}
+.MuiInputBase-input:focus-visible {
+	outline: none;
+}
+.password-eye {
+	stroke: currentColor;
+	stroke-width: 1.7;
+	stroke-linecap: round;
+	stroke-linejoin: round;
+}
+.eye-slash {
+	stroke-dasharray: 1;
+	stroke-dashoffset: 0;
+	transition: stroke-dashoffset 250ms var(--ease-standard);
+}
+.is-visible .eye-slash {
+	stroke-dashoffset: 1;
+}
+.MuiButton-root.MuiButton-root {
+	isolation: isolate;
+	--button-fill: var(--accent-primary);
+	--button-fill-text: #fff;
+}
+:root[data-theme='dark'] .MuiButton-root.MuiButton-root {
+	--button-fill-text: #10251e;
+}
+.MuiButton-root.MuiButton-colorError {
+	--button-fill: #c62828;
+	--button-fill-text: #fff;
+}
+:root[data-theme='dark'] .MuiButton-root.MuiButton-colorError {
+	--button-fill-text: #fff;
+}
+.MuiButton-root.MuiButton-contained {
+	--button-fill: var(--accent-hover);
+}
+.MuiButton-root.MuiButton-contained.MuiButton-colorError {
+	--button-fill: #a91f1f;
+}
+.MuiButton-root.MuiButton-root::before {
+	inset: 0;
+	background: var(--button-fill);
+	opacity: 1;
+	transform: scaleX(0);
+	transform-origin: left;
+	transition: transform 320ms var(--ease-standard);
+	z-index: -1;
+}
+.MuiButton-root.button-large::before,
+.MuiButton-root.MuiButton-sizeLarge::before,
+.MuiButton-root.MuiButton-fullWidth::before,
+.auth-form .MuiButton-contained::before {
+	transform: scaleY(0);
+	transform-origin: bottom;
+}
+@media (hover: hover) and (pointer: fine) {
+	.MuiButton-root.MuiButton-root:not(.Mui-disabled):not(.text-link):hover {
+		color: var(--button-fill-text);
+		background-color: transparent;
+		transform: none;
+		box-shadow: none;
+	}
+	.MuiButton-root.MuiButton-root:not(.Mui-disabled):not(.text-link):hover::before {
+		transform: scale(1);
+	}
+	.MuiButton-root.MuiButton-contained:not(.Mui-disabled):hover {
+		background-color: var(--variant-containedBg);
+	}
+}
+.MuiButton-root.text-link,
+a.text-link {
+	position: relative;
+	align-self: center;
+	min-height: 32px;
+	padding: 4px 0;
+	border-radius: 0;
+	overflow: visible;
+	text-decoration: none;
+	background: none;
+}
+.MuiButton-root.text-link::before {
+	display: none;
+}
+.MuiButton-root.text-link::after,
+a.text-link::after {
+	content: '';
+	position: absolute;
+	bottom: 1px;
+	left: 0;
+	width: 100%;
+	height: 1px;
+	background: currentColor;
+	transform: scaleX(0);
+	transform-origin: left;
+	transition: transform 240ms var(--ease-standard);
+}
+.MuiButton-root.text-link:hover,
+a.text-link:hover {
+	background: none;
+	box-shadow: none;
+	transform: none;
+}
+.text-link:hover::after,
+.text-link:focus-visible::after {
+	transform: scaleX(1);
+}
+.async-button-label {
+	transition: opacity 120ms;
+}
+.is-loading .async-button-label {
+	opacity: 0;
+}
+.loading-dots {
+	position: absolute;
+	inset: 0;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 5px;
+}
+.loading-dots i {
+	width: 5px;
+	height: 5px;
+	border-radius: 50%;
+	background: currentColor;
+	animation: dot-bounce 900ms ease-in-out infinite;
+}
+.loading-dots i:nth-child(2) {
+	animation-delay: 120ms;
+}
+.loading-dots i:nth-child(3) {
+	animation-delay: 240ms;
+}
+.MuiButton-root.is-loading.Mui-disabled {
+	color: var(--text-secondary);
+}
+.loading-preview {
+	padding: 20px;
+	min-width: 0;
+}
+.preview-row {
+	display: flex;
+	gap: 16px;
+	padding: 16px 0;
+	align-items: center;
+}
+.preview-icon {
+	width: 36px;
+	height: 36px;
+	flex-shrink: 0;
+}
+.preview-lines {
+	flex: 1;
+	display: grid;
+	gap: 10px;
+}
+.preview-lines > :first-child {
+	width: 62%;
+	height: 14px;
+}
+.preview-lines > :last-child {
+	width: 38%;
+	height: 10px;
+}
+.route-loading {
+	max-width: 1000px;
+	margin: 48px auto;
+}
+.list-row-enter {
+	animation: row-reveal 320ms var(--ease-standard) both;
+}
+.sessions-scroll {
+	max-height: min(560px, 65dvh);
+	overflow-y: auto;
+	overscroll-behavior: contain;
+	scrollbar-gutter: stable;
+}
+.sessions-scroll .session-row {
+	padding: 14px 20px;
+}
+.session-actions {
+	position: sticky;
+	bottom: 0;
+	padding-top: 12px;
+	background: var(--bg-primary);
+}
+.checkbox-art {
+	display: grid;
+	place-items: center;
+	width: 19px;
+	height: 19px;
+	border: 1.5px solid var(--text-disabled);
+	border-radius: 5px;
+	background: transparent;
+	transition:
+		background-color 200ms,
+		border-color 200ms;
+}
+.checkbox-art svg {
+	width: 17px;
+	height: 17px;
+}
+.checkbox-tick {
+	stroke: transparent;
+	stroke-width: 2;
+	stroke-linecap: round;
+	stroke-linejoin: round;
+	stroke-dasharray: 1;
+	stroke-dashoffset: 1;
+}
+.checkbox-art.is-checked {
+	background: var(--accent-primary);
+	border-color: var(--accent-primary);
+}
+.is-checked .checkbox-tick {
+	stroke: var(--bg-surface);
+	animation: check-draw 240ms var(--ease-standard) forwards;
+}
+.MuiCheckbox-root.Mui-disabled .checkbox-art {
+	opacity: 0.4;
+}
+@keyframes check-draw {
+	to {
+		stroke-dashoffset: 0;
+	}
+}
+@keyframes dot-bounce {
+	0%,
+	65%,
+	100% {
+		transform: translateY(0);
+		opacity: 0.45;
+	}
+	32% {
+		transform: translateY(-4px);
+		opacity: 1;
+	}
+}
+@keyframes row-reveal {
+	from {
+		opacity: 0;
+		translate: 0 5px;
+	}
+	to {
+		opacity: 1;
+		translate: 0 0;
+	}
+}
+@keyframes form-reveal {
+	from {
+		opacity: 0;
+		translate: 0 10px;
+	}
+	to {
+		opacity: 1;
+		translate: 0 0;
+	}
+}
+@keyframes brand-reveal {
+	from {
+		opacity: 0;
+		scale: 0.85;
+		rotate: -8deg;
+	}
+	to {
+		opacity: 1;
+		scale: 1;
+		rotate: 0deg;
+	}
+}
+@media (max-width: 800px) {
+	.auth-switcher.is-register .auth-panel {
+		grid-column: 1;
+	}
+	.auth-switcher .auth-brand {
+		display: none;
+	}
+	.sessions-scroll {
+		max-height: 58dvh;
+	}
+}
+@media (prefers-reduced-motion: reduce) {
+	*,
+	*::before,
+	*::after {
+		animation-duration: 0.01ms !important;
+		animation-delay: 0ms !important;
+		animation-iteration-count: 1 !important;
+		transition-duration: 0.01ms !important;
+	}
+}

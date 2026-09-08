@@ -1,3 +1,5 @@
+import { createElement } from 'react';
+import AnimatedCheck from './components/AnimatedCheck';
 import { createTheme } from '@mui/material';
 
 // Keep MUI's calculated colors (labels, disabled inputs, menus) in sync with CSS tokens.
@@ -33,6 +35,13 @@ export function createPortalTheme(mode: 'light' | 'dark') {
 				defaultProps: { elevation: 0 },
 				styleOverrides: { root: { backgroundImage: 'none', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-md)' } },
 			},
+			MuiCheckbox: {
+				defaultProps: {
+					icon: createElement(AnimatedCheck),
+					checkedIcon: createElement(AnimatedCheck, { checked: true }),
+					indeterminateIcon: createElement(AnimatedCheck, { indeterminate: true }),
+				},
+			},
 			MuiTextField: { defaultProps: { size: 'small', variant: 'outlined' } },
 			// The label and the input share one height token, including the larger auth fields.
 			MuiInputLabel: {
@@ -53,17 +62,28 @@ export function createPortalTheme(mode: 'light' | 'dark') {
 						minHeight: 'var(--field-height, 44px)',
 						fontSize: 14,
 						backgroundColor: 'var(--bg-surface)',
-						transition: 'box-shadow 180ms, border-color 180ms',
-						'& fieldset': { borderColor: 'var(--border-default)' },
-						'&:hover fieldset': { borderColor: 'var(--text-disabled)' },
-						'&.Mui-focused': { boxShadow: '0 0 0 3px var(--accent-subtle)' },
-						'&.Mui-error.Mui-focused': { boxShadow: '0 0 0 3px var(--error-subtle)' },
+						transition: 'background-color 220ms',
+						outline: 'none',
+						'& fieldset': { borderColor: 'var(--border-default)', transition: 'border-color 240ms, box-shadow 240ms' },
+						'&:hover:not(.Mui-disabled) fieldset': { borderColor: 'var(--accent-primary)' },
+						'&.Mui-focused': { boxShadow: 'none' },
+						'&.Mui-error fieldset': { borderColor: 'var(--status-error)' },
 						'&.MuiInputBase-multiline': { padding: '12px 14px' },
 					},
 					input: {
 						height: '20px',
 						lineHeight: '20px',
 						padding: 'calc((var(--field-height, 44px) - 20px) / 2) 14px',
+						'&:-webkit-autofill': {
+							WebkitBoxShadow: '0 0 0 1000px color-mix(in srgb, var(--accent-primary) 8%, var(--bg-surface)) inset',
+							WebkitTextFillColor: 'var(--text-primary)',
+							caretColor: 'var(--text-primary)',
+							borderRadius: 'inherit',
+						},
+						'&:autofill': {
+							boxShadow: '0 0 0 1000px color-mix(in srgb, var(--accent-primary) 8%, var(--bg-surface)) inset',
+							caretColor: 'var(--text-primary)',
+						},
 						'&.MuiInputBase-inputMultiline': { height: 'auto', padding: 0 },
 					},
 				},

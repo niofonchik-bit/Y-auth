@@ -1,3 +1,6 @@
+import AsyncButton from '../components/AsyncButton';
+import LoadingPreview from '../components/LoadingPreview';
+import PasswordField from '../components/PasswordField';
 import { Alert, Button, Divider, Stack, TextField, Typography } from '@mui/material';
 import { type FormEvent, useCallback, useEffect, useState } from 'react';
 import { api, csrfToken } from '../api';
@@ -37,11 +40,14 @@ export function ProfilePage() {
 	const [csrf, setCsrf] = useState('');
 	const [message, setMessage] = useState('');
 	const [pending, setPending] = useState(false);
+	const [loadError, setLoadError] = useState('');
 	useEffect(() => {
-		Promise.all([api<Account>('/api/v1/account'), csrfToken()]).then(([value, token]) => {
-			setAccount(value);
-			setCsrf(token);
-		});
+		Promise.all([api<Account>('/api/v1/account'), csrfToken()])
+			.then(([value, token]) => {
+				setAccount(value);
+				setCsrf(token);
+			})
+			.catch((error: Error) => setLoadError(error.message));
 	}, []);
 	async function save(event: FormEvent<HTMLFormElement>) {
 		event.preventDefault();
@@ -73,14 +79,14 @@ export function ProfilePage() {
 		const result = (await response.json()) as { url: string };
 		setAccount((value) => (value ? { ...value, avatarUrl: result.url } : value));
 	}
-	if (!account) return <div className="skeleton" style={{ height: 180 }} />;
+	if (!account) return loadError ? <Alert severity="error">{loadError}</Alert> : <LoadingPreview />;
 	return (
 		<section className="page">
 			<Header title="Profile" subtitle="Manage the identity shown to connected applications." />
 			<Stack
 				component="form"
 				onSubmit={(event) => save(event as unknown as FormEvent<HTMLFormElement>)}
-				className={`surface section${pending ? ' pending-edge' : ''}`}
+				className="surface section"
 				spacing={2}
 				sx={{ maxWidth: 720 }}
 			>
@@ -109,9 +115,9 @@ export function ProfilePage() {
 				<TextField label="User ID" value={account.id} slotProps={{ input: { readOnly: true } }} />
 				<Typography variant="caption">Created {new Intl.DateTimeFormat(account.locale).format(new Date(account.createdAt))}</Typography>
 				{message && <Alert severity="success">{message}</Alert>}
-				<Button type="submit" variant="contained" disabled={pending}>
-					{pending ? 'Saving…' : 'Save'}
-				</Button>
+				<AsyncButton type="submit" variant="contained" loading={pending}>
+					Save
+				</AsyncButton>
 			</Stack>
 		</section>
 	);
@@ -120,6 +126,7 @@ export function ProfilePage() {
 export function SecurityPage() {
 	const [data, setData] = useState<{ mfa: { enabled: boolean; recoveryCodesRemaining: number }; emailVerified: boolean }>();
 	const [csrf, setCsrf] = useState('');
+	const [loadError, setLoadError] = useState('');
 	const [setup, setSetup] = useState<{ manualSecret: string; qrDataUrl: string }>();
 	const [codes, setCodes] = useState<string[]>();
 	const [passwordMessage, setPasswordMessage] = useState<{ severity: 'success' | 'error'; text: string }>();
@@ -128,10 +135,12 @@ export function SecurityPage() {
 
 	const load = useCallback(
 		() =>
-			Promise.all([api<typeof data>('/api/v1/account/security'), csrfToken()]).then(([value, token]) => {
-				setData(value);
-				setCsrf(token);
-			}),
+			Promise.all([api<typeof data>('/api/v1/account/security'), csrfToken()])
+				.then(([value, token]) => {
+					setData(value);
+					setCsrf(token);
+				})
+				.catch((error: Error) => setLoadError(error.message)),
 		[],
 	);
 
@@ -200,6 +209,7 @@ export function SecurityPage() {
 		setCodes(result.recoveryCodes);
 		await load();
 	}
+	if (!data) return loadError ? <Alert severity="error">{loadError}</Alert> : <LoadingPreview />;
 	return (
 		<section className="page">
 			<Header title="Security" subtitle="Verification, password and two-factor authentication." />
@@ -219,34 +229,31 @@ export function SecurityPage() {
 					<p>Changing your password signs out your other sessions.</p>
 
 					<Stack component="form" onSubmit={changePassword} spacing={2}>
-						<TextField
+						<PasswordField
 							name="currentPassword"
 							value={passwords.currentPassword}
 							onChange={(event) => setPasswords((value) => ({ ...value, currentPassword: event.target.value }))}
 							disabled={passwordPending}
-							type="password"
 							label="Current password"
 							autoComplete="current-password"
 							required
 						/>
 
-						<TextField
+						<PasswordField
 							name="newPassword"
 							value={passwords.newPassword}
 							onChange={(event) => setPasswords((value) => ({ ...value, newPassword: event.target.value }))}
 							disabled={passwordPending}
-							type="password"
 							label="New password"
 							autoComplete="new-password"
 							required
 						/>
 
-						<TextField
+						<PasswordField
 							name="confirmation"
 							value={passwords.confirmation}
 							onChange={(event) => setPasswords((value) => ({ ...value, confirmation: event.target.value }))}
 							disabled={passwordPending}
-							type="password"
 							label="Confirm new password"
 							autoComplete="new-password"
 							required
@@ -254,9 +261,9 @@ export function SecurityPage() {
 
 						{passwordMessage && <Alert severity={passwordMessage.severity}>{passwordMessage.text}</Alert>}
 
-						<Button type="submit" variant="contained" disabled={passwordPending || !csrf}>
-							{passwordPending ? 'Changing…' : 'Change password'}
-						</Button>
+						<AsyncButton type="submit" variant="contained" loading={passwordPending} disabled={!csrf}>
+							Change password
+						</AsyncButton>
 					</Stack>
 				</div>
 
@@ -265,7 +272,7 @@ export function SecurityPage() {
 					<p>{data?.mfa.enabled ? `Enabled · ${data.mfa.recoveryCodesRemaining} recovery codes remain` : 'Not enabled'}</p>
 					{!data?.mfa.enabled && !setup && (
 						<Stack component="form" onSubmit={begin} direction={{ xs: 'column', sm: 'row' }} spacing={1}>
-							<TextField name="password" type="password" label="Current password" required />
+							<PasswordField name="password" label="Current password" required />
 							<Button type="submit">Set up</Button>
 						</Stack>
 					)}
@@ -296,12 +303,22 @@ export function SecurityPage() {
 export function SessionsPage() {
 	const [items, setItems] = useState<Session[]>([]);
 	const [csrf, setCsrf] = useState('');
+	const [loading, setLoading] = useState(true);
+	const [error, setError] = useState('');
+	const [pendingId, setPendingId] = useState<string>();
 	const load = useCallback(
 		() =>
-			Promise.all([api<{ items: Session[] }>('/api/v1/account/sessions'), csrfToken()]).then(([value, token]) => {
-				setItems(value.items);
-				setCsrf(token);
-			}),
+			Promise.all([api<{ items: Session[] }>('/api/v1/account/sessions'), csrfToken()])
+				.then(([value, token]) => {
+					setError('');
+					setItems(value.items);
+					setCsrf(token);
+					setLoading(false);
+				})
+				.catch((cause: Error) => {
+					setError(cause.message);
+					setLoading(false);
+				}),
 		[],
 	);
 	useEffect(() => {
@@ -310,12 +327,16 @@ export function SessionsPage() {
 	return (
 		<section className="page">
 			<Header title="Sessions" subtitle="Review and revoke signed-in devices." />
-			<div className="surface">
-				{items.map((item) => (
+			{error && <Alert severity="error">{error}</Alert>}
+			<section className="surface sessions-scroll" aria-label="Sessions" aria-busy={loading}>
+				{loading && <LoadingPreview />}
+				{!loading && !error && items.length === 0 && <div className="empty-state">No sessions.</div>}
+				{items.map((item, index) => (
 					<Stack
 						key={item.id}
 						direction="row"
-						className="section session-row"
+						className="section session-row list-row-enter"
+						style={{ animationDelay: `${Math.min(index, 8) * 24}ms` }}
 						sx={{ justifyContent: 'space-between', borderBottom: '1px solid var(--border-subtle)' }}
 					>
 						<div>
@@ -327,28 +348,49 @@ export function SessionsPage() {
 								{item.lastIp} · Last active {new Date(item.lastSeenAt).toLocaleString()}
 							</Typography>
 						</div>
-						<Button
+						<AsyncButton
 							color="error"
+							loading={pendingId === item.id}
+							disabled={!!pendingId || !csrf}
 							onClick={async () => {
-								await api(`/api/v1/account/sessions/${item.id}`, { method: 'DELETE', body: JSON.stringify({ csrfToken: csrf }) });
-								if (item.current) location.assign('/login');
-								else await load();
+								if (pendingId) return;
+								setPendingId(item.id);
+								try {
+									await api(`/api/v1/account/sessions/${item.id}`, { method: 'DELETE', body: JSON.stringify({ csrfToken: csrf }) });
+									if (item.current) location.assign('/login');
+									else await load();
+								} catch (error) {
+									setError(error instanceof Error ? error.message : 'Unable to revoke session.');
+								} finally {
+									setPendingId(undefined);
+								}
 							}}
 						>
 							{item.current ? 'Sign out' : 'Revoke'}
-						</Button>
+						</AsyncButton>
 					</Stack>
 				))}
-			</div>
-			<Button
+			</section>
+			<AsyncButton
+				className="session-actions"
+				loading={pendingId === 'others'}
+				disabled={!!pendingId || !csrf}
 				sx={{ mt: 2 }}
 				onClick={async () => {
-					await api('/api/v1/account/sessions/revoke-others', { method: 'POST', body: JSON.stringify({ csrfToken: csrf }) });
-					await load();
+					if (pendingId) return;
+					setPendingId('others');
+					try {
+						await api('/api/v1/account/sessions/revoke-others', { method: 'POST', body: JSON.stringify({ csrfToken: csrf }) });
+						await load();
+					} catch (error) {
+						setError(error instanceof Error ? error.message : 'Unable to revoke sessions.');
+					} finally {
+						setPendingId(undefined);
+					}
 				}}
 			>
 				Revoke all other sessions
-			</Button>
+			</AsyncButton>
 		</section>
 	);
 }
@@ -390,7 +432,7 @@ export function DangerPage() {
 			<Stack className="surface section" spacing={3} sx={{ maxWidth: 760 }}>
 				<Stack component="form" onSubmit={exportData} spacing={1}>
 					<h2>Export account data</h2>
-					<TextField name="password" type="password" label="Current password" required />
+					<PasswordField name="password" label="Current password" required />
 					<Button type="submit" variant="outlined">
 						Export data
 					</Button>
@@ -398,7 +440,7 @@ export function DangerPage() {
 				<Divider />
 				<Stack component="form" onSubmit={(event) => action(event, 'deactivate')} spacing={1}>
 					<h2>Deactivate account</h2>
-					<TextField name="password" type="password" label="Current password" required />
+					<PasswordField name="password" label="Current password" required />
 					<Button type="submit" color="error">
 						Deactivate
 					</Button>
@@ -407,7 +449,7 @@ export function DangerPage() {
 				<Stack component="form" onSubmit={(event) => action(event, 'delete')} spacing={1}>
 					<h2>Delete account</h2>
 					<p>Deletion is scheduled after a 30-day grace period.</p>
-					<TextField name="password" type="password" label="Current password" required />
+					<PasswordField name="password" label="Current password" required />
 					<TextField name="confirmation" label="Type your exact email" required />
 					<Button type="submit" variant="contained" color="error">
 						Schedule deletion

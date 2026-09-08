@@ -1,7 +1,6 @@
-import BrandLogo from '../components/BrandLogo';
 import AppearanceControls from '../components/AppearanceControls';
-import { Alert, Button, Stack, TextField, Typography } from '@mui/material';
-import { type FormEvent, useEffect, useState } from 'react';
+import { Button, Typography } from '@mui/material';
+import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { api, csrfToken } from '../api';
 
@@ -18,7 +17,7 @@ export function SystemPage({ code }: { code: 403 | 404 | 500 }) {
 				<Typography color="text.secondary" sx={{ my: 2 }}>
 					The requested page cannot be displayed. No authentication data was changed.
 				</Typography>
-				<Button component={Link} to="/login">
+				<Button className="text-link" component={Link} to="/login">
 					Back to sign in
 				</Button>
 			</section>
@@ -52,69 +51,6 @@ export function VerifyEmailPage() {
 				<Button component={Link} to="/account/security" sx={{ mt: 2 }}>
 					Continue
 				</Button>
-			</section>
-		</main>
-	);
-}
-
-export function RegisterPage() {
-	const [csrf, setCsrf] = useState('');
-	const [message, setMessage] = useState('');
-	useEffect(() => {
-		csrfToken().then(setCsrf);
-	}, []);
-	async function submit(event: FormEvent<HTMLFormElement>) {
-		event.preventDefault();
-		const form = new FormData(event.currentTarget);
-		try {
-			await api('/api/v1/auth/register', {
-				method: 'POST',
-				body: JSON.stringify({
-					displayName: form.get('displayName'),
-					email: form.get('email'),
-					password: form.get('password'),
-					csrfToken: csrf,
-				}),
-			});
-			window.location.assign('/account/profile');
-		} catch (error) {
-			setMessage(error instanceof Error ? error.message : 'Registration failed');
-		}
-	}
-	return (
-		<main className="auth-page">
-			<div className="auth-controls">
-				<AppearanceControls />
-			</div>
-			<section className="auth-frame surface">
-				<div className="auth-brand">
-					<BrandLogo />
-					<Typography variant="h3">
-						One identity.
-						<br />
-						Every application.
-					</Typography>
-					<Button component={Link} to="/login">
-						Already have an account?
-					</Button>
-				</div>
-				<Stack className="auth-panel" component="form" onSubmit={submit} spacing={2}>
-					<Typography variant="h4">Create account</Typography>
-					{message && <Alert severity="error">{message}</Alert>}
-					<TextField name="displayName" label="Display name" />
-					<TextField name="email" type="email" label="Email address" required />
-					<TextField
-						name="password"
-						type="password"
-						label="Password"
-						helperText="At least 15 characters"
-						slotProps={{ htmlInput: { minLength: 15, maxLength: 256 } }}
-						required
-					/>
-					<Button type="submit" variant="contained" disabled={!csrf}>
-						Create account
-					</Button>
-				</Stack>
 			</section>
 		</main>
 	);

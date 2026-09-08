@@ -6,6 +6,7 @@ import './i18n';
 import './styles/tokens.css';
 import './styles/base.css';
 import './styles/motion.css';
+import './styles/interactions.css';
 import { ThemeController } from './theme';
 
 ThemeController.initialize();

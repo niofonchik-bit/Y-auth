@@ -1,9 +1,9 @@
-import BrandLogo, { BrandSymbol } from '../components/BrandLogo';
-import AppearanceControls from '../components/AppearanceControls';
+import PasswordField from '../components/PasswordField';
+import AsyncButton from '../components/AsyncButton';
 import { Alert, Button, Checkbox, FormControlLabel, Stack, TextField, Typography } from '@mui/material';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { api, ApiError } from '../api';
 import Turnstile from '../components/Turnstile';
 
@@ -56,58 +56,37 @@ export default function LoginPage() {
 	}
 
 	return (
-		<main className="auth-page">
-			<div className="auth-controls">
-				<AppearanceControls />
+		<Stack className="auth-form" component="form" onSubmit={submit} spacing={2.25} sx={{ maxWidth: 370, mx: 'auto' }}>
+			<div>
+				<Typography variant="h4" component="h1">
+					{t('auth.signIn')}
+				</Typography>
+				<Typography color="text.secondary">{t('auth.continueTo', { client: 'Y.auth' })}</Typography>
 			</div>
-			<section className="auth-frame surface">
-				<div className="auth-panel">
-					<Stack component="form" onSubmit={submit} spacing={2.25} sx={{ maxWidth: 370, mx: 'auto' }}>
-						<BrandLogo />
-						<div>
-							<Typography variant="h4" component="h1">
-								{t('auth.signIn')}
-							</Typography>
-							<Typography color="text.secondary">{t('auth.continueTo', { client: 'Y.auth' })}</Typography>
-						</div>
-						{error && (
-							<Alert severity="error" aria-live="polite">
-								{error}
-							</Alert>
-						)}
-						<TextField name="email" label={t('auth.email')} type="email" autoComplete="username" required autoFocus />
-						<TextField name="password" label={t('auth.password')} type="password" autoComplete="current-password" required />
-						{mfaRequired && <TextField name="mfaCode" label={t('auth.mfa')} autoComplete="one-time-code" required autoFocus />}
-						<Stack direction="row" sx={{ justifyContent: 'space-between', alignItems: 'center' }}>
-							<FormControlLabel control={<Checkbox name="keepSignedIn" />} label={t('auth.keepSignedIn')} />
-							<Button href="/forgot-password" size="small">
-								{t('auth.forgot')}
-							</Button>
-						</Stack>
-						{context?.captchaRequired && context.turnstileSiteKey && <Turnstile siteKey={context.turnstileSiteKey} />}
-						<Button className={loading ? 'pending-edge' : ''} type="submit" variant="contained" disabled={!context || loading}>
-							{loading ? `${t('auth.signIn')}…` : t('auth.signIn')}
-						</Button>
-						<Button variant="outlined" href={`/auth/google/start?returnTo=${encodeURIComponent(returnTo)}`}>
-							{t('auth.google')}
-						</Button>
-					</Stack>
-				</div>
-				<div className="auth-brand">
-					<BrandLogo />
-					<div>
-						<div className="identity-art" aria-hidden="true">
-							<div className="identity-core">
-								<BrandSymbol />
-							</div>
-						</div>
-						<Typography variant="h3" sx={{ fontWeight: 600 }}>
-							Identity, precisely controlled.
-						</Typography>
-						<Typography sx={{ mt: 2 }}>One secure account for every connected application.</Typography>
-					</div>
-				</div>
-			</section>
-		</main>
+			{error && (
+				<Alert severity="error" aria-live="polite">
+					{error}
+				</Alert>
+			)}
+			<TextField name="email" label={t('auth.email')} type="email" autoComplete="username" required autoFocus />
+			<PasswordField name="password" label={t('auth.password')} autoComplete="current-password" required />
+			{mfaRequired && <TextField name="mfaCode" label={t('auth.mfa')} autoComplete="one-time-code" required autoFocus />}
+			<Stack direction="row" sx={{ justifyContent: 'space-between', alignItems: 'center' }}>
+				<FormControlLabel control={<Checkbox name="keepSignedIn" />} label={t('auth.keepSignedIn')} />
+				<Button className="text-link" href="/forgot-password" size="small">
+					{t('auth.forgot')}
+				</Button>
+			</Stack>
+			{context?.captchaRequired && context.turnstileSiteKey && <Turnstile siteKey={context.turnstileSiteKey} />}
+			<AsyncButton className="button-large" loading={loading} type="submit" variant="contained" disabled={!context || loading}>
+				{t('auth.signIn')}
+			</AsyncButton>
+			<Button variant="outlined" href={`/auth/google/start?returnTo=${encodeURIComponent(returnTo)}`}>
+				{t('auth.google')}
+			</Button>
+			<Button className="text-link" component={Link} to={`/register${params.size ? `?${params}` : ''}`}>
+				{t('auth.noAccount')}
+			</Button>
+		</Stack>
 	);
 }

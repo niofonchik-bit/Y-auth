@@ -1,3 +1,4 @@
+import LoadingPreview from '../components/LoadingPreview';
 import Add from '@mui/icons-material/Add';
 import Block from '@mui/icons-material/Block';
 import Edit from '@mui/icons-material/Edit';
@@ -262,6 +263,7 @@ export default function AdminPage() {
 				</Button>
 			</Stack>
 			{error && <Alert severity="error">{error}</Alert>}
+			{!dashboard && !error && <LoadingPreview />}
 			<Paper sx={{ overflowX: 'auto' }}>
 				<Tabs value={tab} onChange={(_event, value: number) => setTab(value)} variant="scrollable">
 					{tabNames.map((name) => (
@@ -439,7 +441,7 @@ export default function AdminPage() {
 			)}
 
 			{tab === 3 && (
-				<Stack spacing={2}>
+				<Stack className="sessions-scroll" spacing={1}>
 					{sessions.map((session) => (
 						<Paper key={session.id} sx={{ p: 3 }}>
 							<Stack direction={{ xs: 'column', md: 'row' }} spacing={2} sx={{ justifyContent: 'space-between' }}>

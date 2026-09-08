@@ -1,3 +1,4 @@
+import PasswordField from '../components/PasswordField';
 import Delete from '@mui/icons-material/Delete';
 import Logout from '@mui/icons-material/Logout';
 import { Alert, Button, Chip, Divider, Paper, Stack, TextField, Typography } from '@mui/material';
@@ -187,7 +188,7 @@ export default function AccountPage() {
 					<Stack spacing={2}>
 						<Typography variant="h6">Change email</Typography>
 						<TextField name="newEmail" type="email" label="New email" required />
-						<TextField name="currentPassword" type="password" label="Current password" required />
+						<PasswordField name="currentPassword" label="Current password" required />
 						<AsyncButton type="submit" variant="contained" loading={loading}>
 							Change email
 						</AsyncButton>
@@ -196,8 +197,8 @@ export default function AccountPage() {
 				<Paper component="form" onSubmit={changePassword} sx={{ p: 3, flex: 1 }}>
 					<Stack spacing={2}>
 						<Typography variant="h6">Change password</Typography>
-						<TextField name="currentPassword" type="password" label="Current password" required />
-						<TextField name="newPassword" type="password" label="New password" required slotProps={{ htmlInput: { maxLength: 256 } }} />
+						<PasswordField name="currentPassword" label="Current password" required />
+						<PasswordField name="newPassword" label="New password" required slotProps={{ htmlInput: { maxLength: 256 } }} />
 						<AsyncButton type="submit" variant="contained" loading={loading}>
 							Change password
 						</AsyncButton>

@@ -1,3 +1,4 @@
+import PasswordField from '../components/PasswordField';
 import AuthCard from '../components/AuthCard';
 import { Alert, Button, Stack, TextField, Typography } from '@mui/material';
 import { type FormEvent, useEffect, useState } from 'react';
@@ -84,7 +85,7 @@ export default function ResetPasswordPage() {
 			) : (
 				<Stack component="form" spacing={2.5} onSubmit={submit}>
 					{token ? (
-						<TextField name="password" type="password" label="New password" required slotProps={{ htmlInput: { maxLength: 256 } }} />
+						<PasswordField name="password" label="New password" required slotProps={{ htmlInput: { maxLength: 256 } }} />
 					) : (
 						<TextField name="email" type="email" label="Email" required />
 					)}
@@ -94,7 +95,7 @@ export default function ResetPasswordPage() {
 					</AsyncButton>
 				</Stack>
 			)}
-			<Button href="/login" sx={{ mt: 2 }}>
+			<Button className="text-link" href="/login" sx={{ mt: 2 }}>
 				Back to sign in
 			</Button>
 		</AuthCard>

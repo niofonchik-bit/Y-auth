@@ -1,3 +1,6 @@
+import AsyncButton from '../components/AsyncButton';
+import LoadingPreview from '../components/LoadingPreview';
+import PasswordField from '../components/PasswordField';
 import AuthCard from '../components/AuthCard';
 import { Alert, Box, Button, Checkbox, FormControlLabel, Stack, TextField, Typography } from '@mui/material';
 import { useEffect, useState } from 'react';
@@ -23,6 +26,13 @@ export default function InteractionPage() {
 	const [interaction, setInteraction] = useState<Interaction | null>(null);
 	const [registrationMode, setRegistrationMode] = useState(false);
 	const [error, setError] = useState<string | null>(null);
+	const [submitting, setSubmitting] = useState(false);
+
+	useEffect(() => {
+		const restore = () => setSubmitting(false);
+		window.addEventListener('pageshow', restore);
+		return () => window.removeEventListener('pageshow', restore);
+	}, []);
 
 	useEffect(() => {
 		if (!uid) return;
@@ -49,7 +59,7 @@ export default function InteractionPage() {
 	if (!interaction || !uid)
 		return (
 			<AuthCard>
-				<div className="skeleton" style={{ width: 240, height: 4 }} />
+				<LoadingPreview rows={3} />
 			</AuthCard>
 		);
 
@@ -109,7 +119,15 @@ export default function InteractionPage() {
 				{isRegistration && !interaction.registrationEnabled ? (
 					<Alert severity="warning">Registration is disabled for this application.</Alert>
 				) : (
-					<Box component="form" method="post" action={`/interaction/${encodeURIComponent(uid)}/${isRegistration ? 'register' : 'login'}`}>
+					<Box
+						component="form"
+						method="post"
+						onSubmit={(event) => {
+							if (submitting) event.preventDefault();
+							else setSubmitting(true);
+						}}
+						action={`/interaction/${encodeURIComponent(uid)}/${isRegistration ? 'register' : 'login'}`}
+					>
 						<input type="hidden" name="csrfToken" value={interaction.csrfToken} />
 						<Stack spacing={2.5}>
 							{interactionError && (
@@ -131,10 +149,9 @@ export default function InteractionPage() {
 							)}
 							{isRegistration && <TextField name="displayName" label="Display name (optional)" autoComplete="name" />}
 							<TextField name="email" label="Email" type="email" required autoComplete="email" autoFocus />
-							<TextField
+							<PasswordField
 								name="password"
 								label="Password"
-								type="password"
 								required
 								slotProps={{
 									htmlInput: {
@@ -159,15 +176,25 @@ export default function InteractionPage() {
 							{captchaRequired && !interaction.turnstileSiteKey && (
 								<Alert severity="error">Security check is required but not configured.</Alert>
 							)}
-							<Button type="submit" variant="contained" size="large" disabled={isRegistration && !interaction.registrationEnabled}>
+							<AsyncButton
+								loading={submitting}
+								type="submit"
+								variant="contained"
+								size="large"
+								disabled={isRegistration && !interaction.registrationEnabled}
+							>
 								{isRegistration ? 'Create account' : 'Sign in'}
-							</Button>
+							</AsyncButton>
 							{!isRegistration && (
 								<Button href={`/auth/google/start?interactionUid=${encodeURIComponent(uid)}`}>Continue with Google</Button>
 							)}
-							{!isRegistration && <Button href="/forgot-password">Forgot password</Button>}
+							{!isRegistration && (
+								<Button className="text-link" href="/forgot-password">
+									Forgot password
+								</Button>
+							)}
 							{interaction.prompt === 'login' && (
-								<Button type="button" onClick={() => setRegistrationMode((value) => !value)}>
+								<Button className="text-link" type="button" onClick={() => setRegistrationMode((value) => !value)}>
 									{isRegistration ? 'Back to sign in' : 'Create account'}
 								</Button>
 							)}
