@@ -207,6 +207,7 @@ export function SecurityPage() {
 			body: JSON.stringify({ code: form.get('code'), csrfToken: csrf }),
 		});
 		setCodes(result.recoveryCodes);
+		setSetup(undefined);
 		await load();
 	}
 	if (!data) return loadError ? <Alert severity="error">{loadError}</Alert> : <LoadingPreview />;
