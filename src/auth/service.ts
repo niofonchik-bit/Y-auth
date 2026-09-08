@@ -22,6 +22,24 @@ export function normalizeEmail(email: string): string {
 	return email.trim().toLowerCase();
 }
 
+function hasErrorCode(error: unknown, code: string): boolean {
+	let current: unknown = error;
+
+	for (let depth = 0; depth < 5; depth++) {
+		if (!current || typeof current !== 'object') {
+			return false;
+		}
+
+		if ('code' in current && current.code === code) {
+			return true;
+		}
+
+		current = 'cause' in current ? current.cause : undefined;
+	}
+
+	return false;
+}
+
 export class AuthService {
 	private readonly dummyHash: Promise<string>;
 
@@ -80,7 +98,7 @@ export class AuthService {
 		request: FastifyRequest,
 		reply: FastifyReply,
 	) {
-		const registrationLimit = await this.rateLimiter.consume('registration-ip', request.ip, 5, 3_600);
+		const registrationLimit = await this.rateLimiter.consume('registration-ip', request.ip, 5, 600);
 		const normalizedEmail = normalizeEmail(input.email);
 		if (!emailSchema.safeParse(normalizedEmail).success) {
 			throw new AppError(400, 'REGISTRATION_FAILED', 'Unable to create account');
@@ -117,7 +135,7 @@ export class AuthService {
 				return created;
 			});
 		} catch (error) {
-			if (typeof error === 'object' && error && 'code' in error && error.code === '23505') {
+			if (hasErrorCode(error, '23505')) {
 				throw new AppError(409, 'REGISTRATION_FAILED', 'Unable to create account');
 			}
 			throw error;
