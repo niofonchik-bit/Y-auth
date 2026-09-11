@@ -41,16 +41,22 @@ export default function RegisterPage() {
 	}
 	return (
 		<Stack className="auth-form" component="form" onSubmit={submit} spacing={2}>
-			<Typography variant="h4" component="h1">
-				{t('auth.createAccount')}
-			</Typography>
+			<div className="auth-heading">
+				<Typography variant="h4" component="h1">
+					{t('auth.createAccount')}
+				</Typography>
+				<Typography className="auth-form-subtitle" color="text.secondary">
+					{t('auth.joinToday')}
+				</Typography>
+			</div>
 			{message && <Alert severity="error">{message}</Alert>}
-			<TextField name="displayName" autoComplete="name" autoFocus label={t('auth.displayName')} />
-			<TextField name="email" type="email" autoComplete="email" label={t('auth.email')} required />
+			<TextField name="displayName" autoComplete="name" autoFocus label={t('auth.displayName')} placeholder="Jane Smith" />
+			<TextField name="email" type="email" autoComplete="email" label={t('auth.email')} placeholder="you@example.com" required />
 			<PasswordField
 				name="password"
 				autoComplete="new-password"
 				label={t('auth.password')}
+				placeholder={t('auth.passwordHint')}
 				helperText={t('auth.passwordHint')}
 				slotProps={{ htmlInput: { minLength: 15, maxLength: 256 } }}
 				required

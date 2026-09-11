@@ -14,47 +14,36 @@
 	position: relative;
 }
 .auth-switcher .auth-panel {
-	grid-column: 1;
-	grid-row: 1;
+	position: absolute;
+	left: 0;
+	top: 0;
+	width: 480px;
+	height: 100%;
+	transition: left 620ms var(--ease-standard);
 }
 .auth-switcher.is-register .auth-panel {
-	grid-column: 2;
+	left: 360px;
 }
 .auth-switcher .auth-brand {
 	position: absolute;
 	inset: 0 0 0 auto;
-	width: 50%;
+	width: 360px;
 	justify-content: center;
 	text-align: center;
 	z-index: 2;
-	transition: transform 650ms var(--ease-standard);
+	transition: transform 620ms var(--ease-standard);
 }
 .auth-switcher.is-register .auth-brand {
-	transform: translateX(-100%);
+	transform: translateX(-480px);
 }
 .auth-brand-content {
 	display: flex;
 	flex-direction: column;
 	align-items: center;
 }
-.auth-switcher .identity-art {
-	margin: 0 auto 40px;
-	width: 180px;
-	height: 180px;
-}
-.auth-switcher .identity-core {
-	width: 112px;
-	height: 112px;
-	border-radius: 30px;
-}
-.auth-switcher .identity-core .brand-symbol {
-	width: 84px;
-	height: 84px;
-	animation: brand-reveal 850ms var(--ease-standard) both;
-}
 .auth-form {
 	width: 100%;
-	max-width: 390px;
+	max-width: 340px;
 	margin-inline: auto;
 	animation: form-reveal 440ms var(--ease-standard) both;
 }
@@ -147,9 +136,9 @@ a.text-link::after {
 		opacity: 1;
 	}
 	.MuiButton-root.MuiButton-outlined:not(.Mui-disabled):hover {
-		background-color: transparent;
-		border-color: currentColor;
-		box-shadow: 0 0 0 3px color-mix(in srgb, currentColor 10%, transparent);
+		background-color: var(--accent-subtle);
+		border-color: var(--accent-border);
+		box-shadow: none;
 	}
 	.MuiButton-root.MuiButton-text:not(.Mui-disabled):hover {
 		background-color: transparent;
@@ -168,7 +157,7 @@ a.text-link:focus-visible::after {
 	box-shadow: inset 0 1px 3px rgb(0 0 0 / 12%);
 }
 .MuiButton-root.MuiButton-outlined:not(.Mui-disabled):active {
-	box-shadow: 0 0 0 1px color-mix(in srgb, currentColor 14%, transparent);
+	box-shadow: none;
 }
 .async-button-label {
 	transition: opacity 120ms;
@@ -334,9 +323,14 @@ a.text-link:focus-visible::after {
 		rotate: 0deg;
 	}
 }
-@media (max-width: 800px) {
+@media (max-width: 640px) {
+	.auth-switcher .auth-panel,
 	.auth-switcher.is-register .auth-panel {
-		grid-column: 1;
+		position: static;
+		left: auto;
+		width: 100%;
+		height: auto;
+		transition: none;
 	}
 	.auth-switcher .auth-brand {
 		display: none;

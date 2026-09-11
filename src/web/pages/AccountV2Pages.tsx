@@ -86,38 +86,46 @@ export function ProfilePage() {
 			<Stack
 				component="form"
 				onSubmit={(event) => save(event as unknown as FormEvent<HTMLFormElement>)}
-				className="surface section"
-				spacing={2}
-				sx={{ maxWidth: 720 }}
+				className="surface profile-card"
+				spacing={0}
+				sx={{ maxWidth: 640 }}
 			>
-				<Stack direction="row" spacing={2} sx={{ alignItems: 'center' }}>
+				<div className="profile-card-avatar-row">
 					{account.avatarUrl ? (
 						<img src={account.avatarUrl} alt="" width={64} height={64} style={{ borderRadius: '50%', objectFit: 'cover' }} />
 					) : (
 						<div className="profile-avatar">{(account.displayName ?? account.email)[0]?.toUpperCase()}</div>
 					)}
-					<Button component="label" variant="outlined">
-						Replace avatar
-						<input hidden type="file" accept="image/jpeg,image/png,image/webp" onChange={upload} />
-					</Button>
+					<div className="profile-card-avatar-copy">
+						<strong>{account.displayName || account.email}</strong>
+						<Button component="label" variant="outlined" size="small">
+							Replace avatar
+							<input hidden type="file" accept="image/jpeg,image/png,image/webp" onChange={upload} />
+						</Button>
+					</div>
+				</div>
+				<Stack className="profile-card-fields" spacing={2}>
+					<TextField name="displayName" label="Display name" defaultValue={account.displayName ?? ''} />
+					<TextField
+						label="Email"
+						value={account.email}
+						slotProps={{ input: { readOnly: true } }}
+						helperText={account.emailVerified ? 'Verified' : 'Verification required'}
+					/>
+					<TextField name="locale" label="Locale" select defaultValue={account.locale}>
+						<MenuItem value="en">English</MenuItem>
+						<MenuItem value="ru">Русский</MenuItem>
+					</TextField>
+					<TextField label="User ID" value={account.id} slotProps={{ input: { readOnly: true } }} />
+					<Divider />
+					{message && <Alert severity="success">{message}</Alert>}
+					<div className="profile-card-footer">
+						<Typography variant="caption">Created {new Intl.DateTimeFormat(account.locale).format(new Date(account.createdAt))}</Typography>
+						<AsyncButton type="submit" variant="contained" loading={pending}>
+							Save changes
+						</AsyncButton>
+					</div>
 				</Stack>
-				<TextField name="displayName" label="Display name" defaultValue={account.displayName ?? ''} />
-				<TextField
-					label="Email"
-					value={account.email}
-					slotProps={{ input: { readOnly: true } }}
-					helperText={account.emailVerified ? 'Verified' : 'Verification required'}
-				/>
-				<TextField name="locale" label="Locale" select defaultValue={account.locale}>
-					<MenuItem value="en">English</MenuItem>
-					<MenuItem value="ru">Русский</MenuItem>
-				</TextField>
-				<TextField label="User ID" value={account.id} slotProps={{ input: { readOnly: true } }} />
-				<Typography variant="caption">Created {new Intl.DateTimeFormat(account.locale).format(new Date(account.createdAt))}</Typography>
-				{message && <Alert severity="success">{message}</Alert>}
-				<AsyncButton type="submit" variant="contained" loading={pending}>
-					Save
-				</AsyncButton>
 			</Stack>
 		</section>
 	);
@@ -214,7 +222,7 @@ export function SecurityPage() {
 	return (
 		<section className="page">
 			<Header title="Security" subtitle="Verification, password and two-factor authentication." />
-			<div className="grid" style={{ maxWidth: 760 }}>
+			<div className="grid" style={{ maxWidth: 640 }}>
 				<div className="surface section">
 					<h2>Email verification</h2>
 					<p>{data?.emailVerified ? 'Your email is verified.' : 'Verify your email to protect recovery.'}</p>
@@ -326,7 +334,7 @@ export function SessionsPage() {
 		load();
 	}, [load]);
 	return (
-		<section className="page">
+		<section className="page account-sessions-page">
 			<Header title="Sessions" subtitle="Review and revoke signed-in devices." />
 			{error && <Alert severity="error">{error}</Alert>}
 			<section className="surface sessions-scroll" aria-label="Sessions" aria-busy={loading}>
@@ -430,24 +438,24 @@ export function DangerPage() {
 	return (
 		<section className="page">
 			<Header title="Danger zone" subtitle="Export, deactivate or schedule deletion of your account." />
-			<Stack className="surface section" spacing={3} sx={{ maxWidth: 760 }}>
-				<Stack component="form" onSubmit={exportData} spacing={2}>
+			<div className="danger-grid">
+				<Stack component="form" onSubmit={exportData} className="surface section danger-card" spacing={2}>
 					<h2>Export account data</h2>
+					<p>Download a JSON archive with the account data available for export.</p>
 					<PasswordField name="password" label="Current password" required />
 					<Button type="submit" variant="outlined">
 						Export data
 					</Button>
 				</Stack>
-				<Divider />
-				<Stack component="form" onSubmit={(event) => action(event, 'deactivate')} spacing={2}>
+				<Stack component="form" onSubmit={(event) => action(event, 'deactivate')} className="surface section danger-card" spacing={2}>
 					<h2>Deactivate account</h2>
+					<p>Temporarily disable the account. Signing in again reactivates it.</p>
 					<PasswordField name="password" label="Current password" required />
 					<Button type="submit" color="error">
 						Deactivate
 					</Button>
 				</Stack>
-				<Divider />
-				<Stack component="form" onSubmit={(event) => action(event, 'delete')} spacing={2}>
+				<Stack component="form" onSubmit={(event) => action(event, 'delete')} className="surface section danger-card danger-card--critical" spacing={2}>
 					<h2>Delete account</h2>
 					<p>Deletion is scheduled after a 30-day grace period.</p>
 					<PasswordField name="password" label="Current password" required />
@@ -456,7 +464,7 @@ export function DangerPage() {
 						Schedule deletion
 					</Button>
 				</Stack>
-			</Stack>
+			</div>
 		</section>
 	);
 }

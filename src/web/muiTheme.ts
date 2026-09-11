@@ -8,7 +8,7 @@ export function createPortalTheme(mode: 'light' | 'dark') {
 	return createTheme({
 		palette: {
 			mode,
-			primary: { main: dark ? '#6bc6ab' : '#22785f', contrastText: dark ? '#10251e' : '#ffffff' },
+			primary: { main: dark ? '#6bc6ab' : '#22785f', contrastText: dark ? '#101214' : '#ffffff' },
 			success: { main: dark ? '#6bc6ab' : '#22785f' },
 			error: { main: dark ? '#ff453a' : '#c62828', light: '#ff6259', dark: '#b91c1c', contrastText: '#ffffff' },
 			warning: { main: dark ? '#e8bc73' : '#98651f' },
@@ -44,16 +44,30 @@ export function createPortalTheme(mode: 'light' | 'dark') {
 			},
 			// Use layout gaps so field margins cannot collapse the space between controls.
 			MuiStack: { defaultProps: { useFlexGap: true } },
+			MuiFormControl: {
+				styleOverrides: {
+					root: {
+						minWidth: 0,
+					},
+				},
+			},
 			MuiTextField: { defaultProps: { size: 'small', variant: 'outlined' } },
-			// The label and the input share one height token, including the larger auth fields.
+			// Labels are part of the form rhythm instead of floating inside the field.
 			MuiInputLabel: {
 				styleOverrides: {
 					root: {
-						'&.MuiInputLabel-outlined': {
-							fontSize: 14,
-							lineHeight: '20px',
-							transform: 'translate(14px, calc((var(--field-height, 44px) - 20px) / 2)) scale(1)',
-							'&.MuiInputLabel-shrink': { transform: 'translate(14px, -9px) scale(0.75)' },
+						position: 'static',
+						transform: 'none !important',
+						maxWidth: '100%',
+						marginBottom: 5,
+						fontSize: 13,
+						fontWeight: 500,
+						lineHeight: '18px',
+						color: 'var(--text-primary)',
+						pointerEvents: 'auto',
+						'&.Mui-focused, &.MuiInputLabel-shrink': {
+							color: 'var(--text-primary)',
+							transform: 'none !important',
 						},
 					},
 				},
@@ -67,12 +81,17 @@ export function createPortalTheme(mode: 'light' | 'dark') {
 						'--field-autofill': 'color-mix(in srgb, var(--accent-primary) 8%, var(--bg-surface))',
 						'&:has(input:-webkit-autofill)': { backgroundColor: 'var(--field-autofill)', transition: 'none' },
 						'&:has(input:autofill)': { backgroundColor: 'var(--field-autofill)', transition: 'none' },
-						transition: 'background-color 220ms',
+						transition: 'background-color 180ms ease, box-shadow 180ms ease',
 						outline: 'none',
-						'& fieldset': { borderColor: 'var(--border-default)', transition: 'border-color 240ms, box-shadow 240ms' },
-						'&:hover:not(.Mui-disabled) fieldset': { borderColor: 'var(--accent-primary)' },
-						'&.Mui-focused': { boxShadow: 'none' },
-						'&.Mui-error fieldset': { borderColor: 'var(--status-error)' },
+						'& fieldset': { borderColor: 'var(--border-default)', transition: 'border-color 180ms ease' },
+						'& fieldset legend': { maxWidth: 0, padding: 0 },
+						'& fieldset legend span': { display: 'none' },
+						'&:hover:not(.Mui-disabled) fieldset': { borderColor: 'var(--accent-border)' },
+						'&.Mui-focused': { boxShadow: '0 0 0 3px var(--focus-ring)' },
+						'&.Mui-focused fieldset': { borderColor: 'var(--accent-border)' },
+						'&.Mui-error fieldset': { borderColor: 'var(--error-border)' },
+						'&.Mui-error.Mui-focused': { boxShadow: '0 0 0 3px var(--error-subtle)' },
+						'&:has(input[readonly]), &:has(textarea[readonly])': { backgroundColor: 'var(--bg-surface-elevated)' },
 						'&.MuiInputBase-multiline': { padding: '12px 14px' },
 					},
 					input: {
@@ -93,11 +112,21 @@ export function createPortalTheme(mode: 'light' | 'dark') {
 					},
 				},
 			},
+			MuiFormHelperText: {
+				styleOverrides: {
+					root: {
+						margin: '5px 0 0',
+						fontSize: 12,
+						lineHeight: '16px',
+						color: 'var(--text-disabled)',
+					},
+				},
+			},
 			MuiButton: {
 				defaultProps: { disableElevation: true, disableRipple: true },
 				styleOverrides: {
 					root: {
-						minHeight: 38,
+						minHeight: 44,
 						paddingInline: 16,
 						borderRadius: 'var(--radius-sm)',
 						position: 'relative',
@@ -110,7 +139,7 @@ export function createPortalTheme(mode: 'light' | 'dark') {
 						},
 					},
 					outlined: { borderColor: 'var(--border-default)' },
-					sizeSmall: { minHeight: 32, paddingInline: 10 },
+					sizeSmall: { minHeight: 34, paddingInline: 12, fontSize: 12 },
 				},
 			},
 			MuiIconButton: { styleOverrides: { root: { borderRadius: 'var(--radius-sm)', color: 'var(--text-secondary)' } } },

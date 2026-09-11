@@ -1,21 +1,20 @@
-import { Suspense } from 'react';
+import { Suspense, useEffect, useRef, useState } from 'react';
 import LoadingPreview from './LoadingPreview';
 import BrandLogo from './BrandLogo';
 import AppsOutlined from '@mui/icons-material/AppsOutlined';
 import ArrowOutward from '@mui/icons-material/ArrowOutward';
-import ChevronRight from '@mui/icons-material/ChevronRight';
+import CloseRounded from '@mui/icons-material/CloseRounded';
 import DashboardOutlined from '@mui/icons-material/DashboardOutlined';
 import DevicesOutlined from '@mui/icons-material/DevicesOutlined';
 import HistoryOutlined from '@mui/icons-material/HistoryOutlined';
+import MenuRounded from '@mui/icons-material/MenuRounded';
 import PeopleOutlined from '@mui/icons-material/PeopleOutlined';
 import PersonOutlined from '@mui/icons-material/PersonOutlined';
 import SettingsOutlined from '@mui/icons-material/SettingsOutlined';
 import ShieldOutlined from '@mui/icons-material/ShieldOutlined';
 import WarningAmberOutlined from '@mui/icons-material/WarningAmberOutlined';
-import { Typography } from '@mui/material';
-import { useRef } from 'react';
+import { Button, IconButton, Typography } from '@mui/material';
 import AppearanceControls from './AppearanceControls';
-import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { api, ApiError } from '../api';
@@ -30,8 +29,10 @@ export default function PortalShell({ mode }: { mode: 'account' | 'admin' }) {
 	const { t } = useTranslation();
 	const contentRef = useRef<HTMLDivElement>(null);
 	const [account, setAccount] = useState<Account>();
+	const [sidebarOpen, setSidebarOpen] = useState(false);
 	const navigate = useNavigate();
 	const location = useLocation();
+
 	useEffect(() => {
 		api<Account>('/api/v1/account')
 			.then((value) => {
@@ -43,18 +44,24 @@ export default function PortalShell({ mode }: { mode: 'account' | 'admin' }) {
 					navigate(`/login?returnTo=${encodeURIComponent(location.pathname + location.search)}`, { replace: true });
 			});
 	}, [location.pathname, location.search, mode, navigate]);
+
+	useEffect(() => {
+		setSidebarOpen(false);
+	}, [location.pathname]);
+
 	// Animate the existing DOM so navigation does not remount stateful forms.
 	useEffect(() => {
 		if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
 		const animation = contentRef.current?.animate(
 			[
-				{ opacity: 0, transform: 'translateY(8px)' },
-				{ opacity: 1, transform: 'translateY(0)' },
+				{ opacity: 0, transform: 'translateX(12px)' },
+				{ opacity: 1, transform: 'translateX(0)' },
 			],
-			{ id: location.pathname, duration: 280, easing: 'cubic-bezier(0.2, 0.8, 0.2, 1)' },
+			{ id: location.pathname, duration: 280, easing: 'cubic-bezier(0, 0, 0.2, 1)' },
 		);
 		return () => animation?.cancel();
 	}, [location.pathname]);
+
 	const links: Array<[string, string]> =
 		mode === 'admin'
 			? [
@@ -77,18 +84,30 @@ export default function PortalShell({ mode }: { mode: 'account' | 'admin' }) {
 			: [PersonOutlined, ShieldOutlined, DevicesOutlined, WarningAmberOutlined];
 	const current = [...links].reverse().find(([to]) => location.pathname === to || location.pathname.startsWith(`${to}/`));
 	const name = account?.displayName || account?.email || t('common.loading');
+	const areaTitle = t(mode === 'admin' ? 'admin.title' : 'account.title');
+	const switchTarget = mode === 'admin' ? '/account/profile' : '/admin';
+	const switchLabel = t(mode === 'admin' ? 'account.title' : 'admin.title');
+
 	return (
-		<div className="portal">
+		<div className={`portal${sidebarOpen ? ' sidebar-open' : ''}`}>
+			<button type="button" className="sidebar-backdrop" aria-label="Close navigation" onClick={() => setSidebarOpen(false)} />
 			<aside className="sidebar">
 				<div className="sidebar-brand">
 					<BrandLogo />
+					<span className={`sidebar-mode-badge${mode === 'admin' ? ' is-admin' : ''}`}>{mode === 'admin' ? 'Admin' : 'Account'}</span>
 				</div>
-				<div className="sidebar-caption">{t(mode === 'admin' ? 'admin.title' : 'account.title')}</div>
-				<nav className="sidebar-nav" aria-label={t(mode === 'admin' ? 'admin.title' : 'account.title')}>
+				<nav className="sidebar-nav" aria-label={areaTitle}>
 					{links.map(([to, key], index) => {
 						const Icon = icons[index];
 						return (
-							<NavLink key={to} to={to} end={to === '/admin'} className={({ isActive }) => `sidebar-link${isActive ? ' active' : ''}`}>
+							<NavLink
+								key={to}
+								to={to}
+								end={to === '/admin'}
+								title={t(key)}
+								className={({ isActive }) => `sidebar-link${isActive ? ' active' : ''}`}
+								onClick={() => setSidebarOpen(false)}
+							>
 								{Icon && <Icon />}
 								<span>{t(key)}</span>
 							</NavLink>
@@ -96,17 +115,11 @@ export default function PortalShell({ mode }: { mode: 'account' | 'admin' }) {
 					})}
 				</nav>
 				<div className="sidebar-footer">
-					{(mode === 'admin' || account?.isAdmin) && (
-						<NavLink className="sidebar-link" to={mode === 'admin' ? '/account/profile' : '/admin'}>
-							<ArrowOutward />
-							<span>{t(mode === 'admin' ? 'account.title' : 'admin.title')}</span>
-						</NavLink>
-					)}
 					<div className="sidebar-account">
 						<div className="account-avatar" aria-hidden="true">
 							{name.slice(0, 1).toUpperCase()}
 						</div>
-						<div>
+						<div className="sidebar-account-copy">
 							<Typography variant="body2" title={name}>
 								{name}
 							</Typography>
@@ -119,14 +132,30 @@ export default function PortalShell({ mode }: { mode: 'account' | 'admin' }) {
 			</aside>
 			<div className="portal-workspace">
 				<header className="portal-topbar">
-					<div className="breadcrumbs">
-						<ShieldOutlined />
-						<span>{t(mode === 'admin' ? 'admin.title' : 'account.title')}</span>
-						<ChevronRight />
-						<strong>{current ? t(current[1]) : 'Y.auth'}</strong>
+					<div className="portal-topbar-left">
+						<IconButton
+							className="sidebar-toggle"
+							aria-label={sidebarOpen ? 'Close navigation' : 'Open navigation'}
+							aria-expanded={sidebarOpen}
+							onClick={() => setSidebarOpen((value) => !value)}
+						>
+							{sidebarOpen ? <CloseRounded /> : <MenuRounded />}
+						</IconButton>
+						<div className="breadcrumbs">
+							<span>{areaTitle}</span>
+							<span className="breadcrumb-separator" aria-hidden="true">
+								/
+							</span>
+							<strong>{current ? t(current[1]) : 'Y.auth'}</strong>
+						</div>
 					</div>
 					<div className="topbar-actions">
-						{import.meta.env.VITE_APP_ENVIRONMENT === 'development' && <span className="environment-badge">DEVELOPMENT</span>}
+						{import.meta.env.VITE_APP_ENVIRONMENT === 'development' && <span className="environment-badge">Development</span>}
+						{(mode === 'admin' || account?.isAdmin) && (
+							<Button className="portal-switch" component={NavLink} to={switchTarget} size="small" variant="outlined" startIcon={<ArrowOutward />}>
+								{switchLabel}
+							</Button>
+						)}
 						<AppearanceControls />
 					</div>
 				</header>

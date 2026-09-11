@@ -57,19 +57,21 @@ export default function LoginPage() {
 
 	return (
 		<Stack className="auth-form" component="form" onSubmit={submit} spacing={2.25} sx={{ maxWidth: 370, mx: 'auto' }}>
-			<div>
+			<div className="auth-heading">
 				<Typography variant="h4" component="h1">
 					{t('auth.signIn')}
 				</Typography>
-				<Typography color="text.secondary">{t('auth.continueTo', { client: 'Y.auth' })}</Typography>
+				<Typography className="auth-form-subtitle" color="text.secondary">
+					{t('auth.continueTo', { client: 'Y.auth' })}
+				</Typography>
 			</div>
 			{error && (
 				<Alert severity="error" aria-live="polite">
 					{error}
 				</Alert>
 			)}
-			<TextField name="email" label={t('auth.email')} type="email" autoComplete="username" required autoFocus />
-			<PasswordField name="password" label={t('auth.password')} autoComplete="current-password" required />
+			<TextField name="email" label={t('auth.email')} placeholder="you@example.com" type="email" autoComplete="username" required autoFocus />
+			<PasswordField name="password" label={t('auth.password')} placeholder={t('auth.password')} autoComplete="current-password" required />
 			{mfaRequired && <TextField name="mfaCode" label={t('auth.mfa')} autoComplete="one-time-code" required autoFocus />}
 			<Stack direction="row" sx={{ justifyContent: 'space-between', alignItems: 'center' }}>
 				<FormControlLabel control={<Checkbox name="keepSignedIn" />} label={t('auth.keepSignedIn')} />
@@ -81,6 +83,9 @@ export default function LoginPage() {
 			<AsyncButton className="button-large" loading={loading} type="submit" variant="contained" disabled={!context || loading}>
 				{t('auth.signIn')}
 			</AsyncButton>
+			<div className="auth-divider" aria-hidden="true">
+				<span>{t('auth.or')}</span>
+			</div>
 			<Button variant="outlined" href={`/auth/google/start?returnTo=${encodeURIComponent(returnTo)}`}>
 				{t('auth.google')}
 			</Button>

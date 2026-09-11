@@ -6,11 +6,22 @@ import AppearanceControls from './AppearanceControls';
 import { BrandSymbol } from './BrandLogo';
 import LoadingPreview from './LoadingPreview';
 
+function BrandFeature({ children }: { children: string }) {
+	return (
+		<li>
+			<svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+				<path d="M2.5 7l3 3L11.5 4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+			</svg>
+			<span>{children}</span>
+		</li>
+	);
+}
+
 export default function AuthExperience() {
 	const { pathname } = useLocation();
 	const { t } = useTranslation();
 	return (
-		<main className="auth-page">
+		<main className="auth-page auth-page--split">
 			<div className="auth-controls">
 				<AppearanceControls />
 			</div>
@@ -21,14 +32,23 @@ export default function AuthExperience() {
 					</Suspense>
 				</div>
 				<aside className="auth-brand">
+					<div className="auth-brand-grid" aria-hidden="true" />
+					<div className="auth-brand-watermark" aria-hidden="true">
+						<BrandSymbol />
+					</div>
 					<div className="auth-brand-content">
-						<div className="identity-art" aria-hidden="true">
-							<div className="identity-core">
-								<BrandSymbol />
-							</div>
-						</div>
-						<Typography variant="h3">{t('auth.brandTitle')}</Typography>
-						<Typography sx={{ mt: 2 }}>{t('auth.brandSubtitle')}</Typography>
+						<div className="auth-brand-kicker">Y.auth</div>
+						<Typography component="h2" className="auth-brand-title">
+							{t('auth.brandTitle')}
+						</Typography>
+						<Typography component="p" className="auth-brand-subtitle">
+							{t('auth.brandSubtitle')}
+						</Typography>
+						<ul className="auth-brand-features">
+							<BrandFeature>{t('auth.brandFeatureSso')}</BrandFeature>
+							<BrandFeature>{t('auth.brandFeatureMfa')}</BrandFeature>
+							<BrandFeature>{t('auth.brandFeatureAudit')}</BrandFeature>
+						</ul>
 					</div>
 				</aside>
 			</section>

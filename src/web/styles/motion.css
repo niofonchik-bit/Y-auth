@@ -47,7 +47,7 @@
 		transform 240ms var(--ease-standard);
 }
 .sidebar-link > span {
-	transition: transform 220ms var(--ease-standard);
+	transition: color 180ms var(--ease-standard);
 }
 .brand-symbol {
 	transition:
@@ -77,20 +77,10 @@
 		box-shadow: 0 0 0 3px var(--accent-subtle);
 	}
 	.sidebar-link:hover {
-		background: linear-gradient(100deg, var(--accent-subtle), var(--bg-surface-hover));
-		border-color: var(--accent-border);
-		color: var(--accent-primary);
-		box-shadow: 0 3px 10px rgb(0 0 0 / 4%);
-	}
-	.sidebar-link:hover::before {
-		opacity: 1;
-		transform: scaleY(1);
-	}
-	.sidebar-link:hover > span {
-		transform: translateX(3px);
-	}
-	.sidebar-link:hover > svg {
-		transform: translateX(2px) scale(1.07);
+		background: var(--bg-surface-hover);
+		border-color: transparent;
+		color: var(--text-primary);
+		box-shadow: none;
 	}
 	.metric-card:hover {
 		border-color: var(--accent-border);
