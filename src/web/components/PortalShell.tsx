@@ -45,6 +45,7 @@ export default function PortalShell({ mode }: { mode: 'account' | 'admin' }) {
 			});
 	}, [location.pathname, location.search, mode, navigate]);
 
+	// biome-ignore lint/correctness/useExhaustiveDependencies: close the sidebar whenever the route changes.
 	useEffect(() => {
 		setSidebarOpen(false);
 	}, [location.pathname]);
@@ -152,7 +153,14 @@ export default function PortalShell({ mode }: { mode: 'account' | 'admin' }) {
 					<div className="topbar-actions">
 						{import.meta.env.VITE_APP_ENVIRONMENT === 'development' && <span className="environment-badge">Development</span>}
 						{(mode === 'admin' || account?.isAdmin) && (
-							<Button className="portal-switch" component={NavLink} to={switchTarget} size="small" variant="outlined" startIcon={<ArrowOutward />}>
+							<Button
+								className="portal-switch"
+								component={NavLink}
+								to={switchTarget}
+								size="small"
+								variant="outlined"
+								startIcon={<ArrowOutward />}
+							>
 								{switchLabel}
 							</Button>
 						)}

@@ -1012,7 +1012,9 @@ code,
 	border: 1px solid var(--border-default);
 	border-radius: 20px;
 	background: var(--bg-surface);
-	box-shadow: 0 2px 3px rgb(0 0 0 / 8%), 0 24px 80px rgb(0 0 0 / 28%);
+	box-shadow:
+		0 2px 3px rgb(0 0 0 / 8%),
+		0 24px 80px rgb(0 0 0 / 28%);
 }
 .auth-panel {
 	display: flex;
@@ -1043,8 +1045,7 @@ code,
 	position: absolute;
 	inset: 0;
 	background-image:
-		linear-gradient(rgb(230 239 235 / 5.5%) 0.5px, transparent 0.5px),
-		linear-gradient(90deg, rgb(230 239 235 / 5.5%) 0.5px, transparent 0.5px);
+		linear-gradient(rgb(230 239 235 / 5.5%) 0.5px, transparent 0.5px), linear-gradient(90deg, rgb(230 239 235 / 5.5%) 0.5px, transparent 0.5px);
 	background-size: 36px 36px;
 	pointer-events: none;
 }
@@ -1195,7 +1196,9 @@ code,
 	background: var(--bg-surface);
 	border-right: 1px solid var(--border-subtle);
 	overflow: visible;
-	transition: width 260ms var(--ease-standard), transform 280ms var(--ease-standard);
+	transition:
+		width 260ms var(--ease-standard),
+		transform 280ms var(--ease-standard);
 }
 .sidebar-brand {
 	height: 60px;

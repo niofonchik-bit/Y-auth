@@ -120,7 +120,9 @@ export function ProfilePage() {
 					<Divider />
 					{message && <Alert severity="success">{message}</Alert>}
 					<div className="profile-card-footer">
-						<Typography variant="caption">Created {new Intl.DateTimeFormat(account.locale).format(new Date(account.createdAt))}</Typography>
+						<Typography variant="caption">
+							Created {new Intl.DateTimeFormat(account.locale).format(new Date(account.createdAt))}
+						</Typography>
 						<AsyncButton type="submit" variant="contained" loading={pending}>
 							Save changes
 						</AsyncButton>
@@ -455,7 +457,12 @@ export function DangerPage() {
 						Deactivate
 					</Button>
 				</Stack>
-				<Stack component="form" onSubmit={(event) => action(event, 'delete')} className="surface section danger-card danger-card--critical" spacing={2}>
+				<Stack
+					component="form"
+					onSubmit={(event) => action(event, 'delete')}
+					className="surface section danger-card danger-card--critical"
+					spacing={2}
+				>
 					<h2>Delete account</h2>
 					<p>Deletion is scheduled after a 30-day grace period.</p>
 					<PasswordField name="password" label="Current password" required />
