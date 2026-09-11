@@ -142,6 +142,8 @@ export function SecurityPage() {
 	const [passwordMessage, setPasswordMessage] = useState<{ severity: 'success' | 'error'; text: string }>();
 	const [passwordPending, setPasswordPending] = useState(false);
 	const [passwords, setPasswords] = useState({ currentPassword: '', newPassword: '', confirmation: '' });
+	const [mfaMessage, setMfaMessage] = useState<{ severity: 'success' | 'error'; text: string }>();
+	const [mfaPending, setMfaPending] = useState(false);
 
 	const load = useCallback(
 		() =>
@@ -220,6 +222,44 @@ export function SecurityPage() {
 		setSetup(undefined);
 		await load();
 	}
+
+	async function disableMfa(event: FormEvent<HTMLFormElement>) {
+		event.preventDefault();
+
+		if (mfaPending || !csrf) return;
+
+		const form = new FormData(event.currentTarget);
+
+		setMfaPending(true);
+		setMfaMessage(undefined);
+
+		try {
+			await api<{ disabled: boolean }>('/api/v1/account/mfa/disable', {
+				method: 'POST',
+				body: JSON.stringify({
+					currentPassword: form.get('currentPassword'),
+					code: form.get('code'),
+					csrfToken: csrf,
+				}),
+			});
+
+			setCodes(undefined);
+			setMfaMessage({
+				severity: 'success',
+				text: 'Two-factor authentication disabled.',
+			});
+
+			await load();
+		} catch (error) {
+			setMfaMessage({
+				severity: 'error',
+				text: error instanceof Error ? error.message : 'Unable to disable two-factor authentication.',
+			});
+		} finally {
+			setMfaPending(false);
+		}
+	}
+
 	if (!data) return loadError ? <Alert severity="error">{loadError}</Alert> : <LoadingPreview />;
 	return (
 		<section className="page">
@@ -281,12 +321,16 @@ export function SecurityPage() {
 				<div className="surface section">
 					<h2>Two-factor authentication</h2>
 					<p>{data?.mfa.enabled ? `Enabled · ${data.mfa.recoveryCodesRemaining} recovery codes remain` : 'Not enabled'}</p>
+
+					{mfaMessage && <Alert severity={mfaMessage.severity}>{mfaMessage.text}</Alert>}
+
 					{!data?.mfa.enabled && !setup && (
 						<Stack component="form" onSubmit={begin} direction={{ xs: 'column', sm: 'row' }} spacing={1}>
 							<PasswordField name="password" label="Current password" required />
 							<Button type="submit">Set up</Button>
 						</Stack>
 					)}
+
 					{setup && (
 						<Stack spacing={2}>
 							<img src={setup.qrDataUrl} alt="Authenticator QR code" width={220} />
@@ -299,11 +343,38 @@ export function SecurityPage() {
 							</Stack>
 						</Stack>
 					)}
+
 					{codes && (
 						<Alert severity="warning">
 							<strong>Save these one-time recovery codes now:</strong>
 							<pre>{codes.join('\n')}</pre>
 						</Alert>
+					)}
+
+					{data.mfa.enabled && (
+						<Stack component="form" onSubmit={disableMfa} spacing={2}>
+							<Divider />
+
+							<PasswordField
+								name="currentPassword"
+								label="Current password"
+								autoComplete="current-password"
+								disabled={mfaPending}
+								required
+							/>
+
+							<TextField
+								name="code"
+								label="Authenticator or recovery code"
+								autoComplete="one-time-code"
+								disabled={mfaPending}
+								required
+							/>
+
+							<AsyncButton type="submit" variant="outlined" loading={mfaPending} disabled={!csrf}>
+								Disable two-factor authentication
+							</AsyncButton>
+						</Stack>
 					)}
 				</div>
 			</div>
